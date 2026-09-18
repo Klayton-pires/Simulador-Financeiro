@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 280" fill="none">
+  <!-- Green Cloud Body with Left Swoosh/Arrow -->
+  <path 
+    d="M 120 230 C 70 230 35 195 35 150 C 35 105 70 70 120 70 C 135 70 148 74 160 80 C 180 45 220 25 265 25 C 325 25 375 65 385 125 C 400 125 415 132 425 145" 
+    stroke="#00A859" 
+    stroke-width="16" 
+    stroke-linecap="round" 
+    fill="none" 
+  />
+  <!-- Arrow head at the bottom-left -->
+  <path 
+    d="M 140 215 L 120 245 L 160 238 Z" 
+    fill="#00A859" 
+  />
+
+  <!-- Digital Pixel Cubes (Dispersing Top-Right) -->
+  <!-- Black / Charcoal Cubes -->
+  <rect x="390" y="85" width="22" height="22" rx="2" fill="#18181B" />
+  <rect x="440" y="55" width="25" height="25" rx="2" fill="#18181B" />
+  <rect x="470" y="115" width="22" height="22" rx="2" fill="#18181B" />
+
+  <!-- Green Cubes -->
+  <rect x="470" y="15" width="22" height="22" rx="2" fill="#00A859" />
+  <rect x="495" y="45" width="36" height="36" rx="3" fill="#00A859" />
+  <rect x="430" y="110" width="25" height="25" rx="2" fill="#00A859" />
+  <rect x="392" y="160" width="28" height="28" rx="2" fill="#00A859" />
+
+  <!-- Wordmark "Nanu" -->
+  <text x="105" y="175" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="92" fill="#18181B" letter-spacing="-2">Nanu</text>
+
+  <!-- Wordmark "CLOUD" -->
+  <text x="180" y="248" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="82" fill="#00A859" letter-spacing="0">CLOUD</text>
+</svg>

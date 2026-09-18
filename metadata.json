@@ -1,0 +1,6 @@
+{
+  "name": "Simulador Financeiro Nanucloud",
+  "description": "Simulador financeiro e de formação de preços Nanucloud para comércio local, importação aduaneira, serviços e intermediação. A utilização deste aplicativo não dispensa a consulta de um profissional de contas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
