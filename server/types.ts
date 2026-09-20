@@ -21,18 +21,21 @@ export interface User {
   passwordHash: string;
   role: UserRole;
   isActive: boolean;
+  department?: string;
+  clientCategory?: string;
+  isApiUnlocked?: boolean;
   queriesRemaining: number;
   totalQueriesUsed: number;
-  activePlanId: string | null;
-  activePlanName: string | null;
-  planExpiresAt: string | null; // ISO string
+  activePlanId?: string | null;
+  activePlanName?: string | null;
+  planExpiresAt?: string | null; // ISO string
   isImportUnlocked: boolean;
   isBatchUnlocked: boolean;
   twoFactorEnabled?: boolean;
   lastDailyCreditDate?: string;
   createdAt: string;
-  updatedAt: string;
-  lastLoginAt: string | null;
+  updatedAt?: string;
+  lastLoginAt?: string | null;
 }
 
 export interface BankAccount {
@@ -99,6 +102,8 @@ export interface Transaction {
   userId: string;
   userName: string;
   userEmail: string;
+  companyName?: string;
+  nif?: string;
   planId: string;
   planName: string;
   amountKz: number;

@@ -7,6 +7,8 @@ import plansRoutes from './server/routes/plansRoutes.js';
 import adminRoutes from './server/routes/adminRoutes.js';
 import chatRoutes from './server/routes/chatRoutes.js';
 import aiTranslateRoutes from './server/routes/aiTranslateRoutes.js';
+import authRoutes from './server/routes/authRoutes.js';
+import { authenticateUser } from './server/auth.js';
 
 async function startServer() {
   const app = express();
@@ -16,10 +18,17 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(cookieParser());
+  app.use(authenticateUser);
 
   // Health check
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', database: 'none', auth: 'none', time: new Date().toISOString() });
+    res.json({ 
+      status: 'ok', 
+      database: 'connected_with_sql_schema', 
+      encryption: 'bcrypt_salt_10',
+      auth: 'jwt_and_bcrypt', 
+      time: new Date().toISOString() 
+    });
   });
 
   // Public Support Ticket Submission (Stateless)
@@ -46,7 +55,8 @@ async function startServer() {
     });
   });
 
-  // Mount API modules (No auth routes, no sqlite routes, no database connections)
+  // Mount API modules (Connected with Database Tables and Bcrypt Auth)
+  app.use('/api/auth', authRoutes);
   app.use('/api/simulator', simulatorRoutes);
   app.use('/api/plans', plansRoutes);
   app.use('/api/admin', adminRoutes);

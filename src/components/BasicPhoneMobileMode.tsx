@@ -5,6 +5,8 @@ import { COUNTRIES_DB, getEffectiveCountryFiscal, getAvailableCountryList } from
 import { canUserSimulate } from '../utils/accessControl';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
+import { NumericInput } from './common/NumericInput';
+import { parseFormattedNumber } from '../utils/numberFormat';
 
 interface BasicPhoneMobileModeProps {
   user: UserSafe | null;
@@ -70,8 +72,8 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
 
   const handleCalculate = async () => {
     setErrorMessage(null);
-    const cost = parseFloat(costInput) || 0;
-    const margin = parseFloat(marginInput) || 0;
+    const cost = parseFormattedNumber(costInput);
+    const margin = parseFormattedNumber(marginInput);
     const vat = vatRate || 0;
     const tpaPercent = useTpa ? (country.tpa || 1.0) : 0;
 
@@ -319,15 +321,14 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
             <span>PREÇO DE CUSTO BASE ({country.curr})</span>
             <span className="text-[10px] text-indigo-400">Insira ou use o teclado</span>
           </label>
-          <input
-            type="number"
+          <NumericInput
             value={costInput}
-            onChange={(e) => {
-              setCostInput(e.target.value);
+            onChange={(val) => {
+              setCostInput(val);
               setHasCalculated(false);
             }}
             className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-lg font-mono font-bold text-white text-center focus:border-emerald-500 focus:outline-none"
-            placeholder="0.00"
+            placeholder="0,000"
           />
         </div>
 

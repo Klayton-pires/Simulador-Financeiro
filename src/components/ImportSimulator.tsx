@@ -23,9 +23,10 @@ import {
 import { isStaffOrAdmin, canUserSimulate } from '../utils/accessControl';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { ConfirmSimulationModal, SimulationSummaryItem } from './ConfirmSimulationModal';
-import { saveSimulationToFirestore } from '../services/firebase';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
+import { NumericInput } from './common/NumericInput';
+import { parseFormattedNumber } from '../utils/numberFormat';
 
 interface ImportSimulatorProps {
   user: UserSafe | null;
@@ -59,7 +60,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
   const [iecRate, setIecRate] = useState<string>('');
   const [otherFees, setOtherFees] = useState<string>('');
   const [marginPct, setMarginPct] = useState<string>('');
-  const [tpaRate, setTpaRate] = useState<string>('1.0');
+  const [tpaRate, setTpaRate] = useState<string>('');
   const [productName, setProductName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
@@ -96,7 +97,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const cFob = parseFloat(fob) || 0;
+    const cFob = parseFormattedNumber(fob);
     if (cFob <= 0) {
       setErrorMessage('O valor FOB (Mercadoria) deve ser superior a zero.');
       return;
@@ -122,7 +123,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
     setIsCalculating(true);
 
     try {
-      const cFob = parseFloat(fob) || 0;
+      const cFob = parseFormattedNumber(fob);
       let remaining = user?.queriesRemaining || 0;
       let calcData = null;
 
@@ -134,13 +135,13 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
             originCountry,
             destCountry,
             fob: cFob,
-            freight: parseFloat(freight) || 0,
-            insurance: parseFloat(insurance) || 0,
-            customsRate: parseFloat(customsRate) || 0,
-            iecRate: parseFloat(iecRate) || 0,
-            otherFees: parseFloat(otherFees) || 0,
+            freight: parseFormattedNumber(freight),
+            insurance: parseFormattedNumber(insurance),
+            customsRate: parseFormattedNumber(customsRate),
+            iecRate: parseFormattedNumber(iecRate),
+            otherFees: parseFormattedNumber(otherFees),
             vatRate,
-            marginPct: parseFloat(marginPct) || 0,
+            marginPct: parseFormattedNumber(marginPct),
             productName,
             notes
           })
@@ -163,12 +164,12 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
       }
 
       if (!calcData) {
-        const cFreight = parseFloat(freight) || 0;
-        const cIns = parseFloat(insurance) || 0;
-        const cCustRate = parseFloat(customsRate) || 0;
-        const cIecRate = parseFloat(iecRate) || 0;
-        const cOther = parseFloat(otherFees) || 0;
-        const cMargin = parseFloat(marginPct) || 0;
+        const cFreight = parseFormattedNumber(freight);
+        const cIns = parseFormattedNumber(insurance);
+        const cCustRate = parseFormattedNumber(customsRate);
+        const cIecRate = parseFormattedNumber(iecRate);
+        const cOther = parseFormattedNumber(otherFees);
+        const cMargin = parseFormattedNumber(marginPct);
 
         const cif = cFob + cFreight + cIns;
         const customsDuty = cif * (cCustRate / 100);
@@ -182,7 +183,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
 
         const vatCost = nationalizedCostNet * (vatRate / 100);
         const netVatToPay = Math.max(0, vatSale - vatCost);
-        const cTpa = parseFloat(tpaRate) || 0;
+        const cTpa = parseFormattedNumber(tpaRate);
         const tpaCost = pvpFinal * (cTpa / 100);
         const industrialTaxRate = destFiscal.ii || 25;
         const operatingProfit = profit - tpaCost;
@@ -226,18 +227,6 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
 
       if (user) {
         onCalculationDone(remaining);
-        // Save to Firestore
-        saveSimulationToFirestore(user.id, 'import', {
-          originCountry,
-          destCountry,
-          fob: calcData.fob,
-          cif: calcData.cif,
-          landedCost: calcData.landedCost,
-          recommendedPVP: calcData.recommendedPVP,
-          totalCustomsDuties: calcData.totalCustomsDuties,
-          estimatedProfit: calcData.estimatedProfit,
-          productName: productName || 'Mercadoria Internacional'
-        }).catch(() => {});
       } else {
         const left = consumeGuestCredit();
         if (left === 0) {
@@ -252,10 +241,10 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
     }
   };
 
-  const cFob = parseFloat(fob) || 0;
-  const cFreight = parseFloat(freight) || 0;
-  const cIns = parseFloat(insurance) || 0;
-  const cOther = parseFloat(otherFees) || 0;
+  const cFob = parseFormattedNumber(fob);
+  const cFreight = parseFormattedNumber(freight);
+  const cIns = parseFormattedNumber(insurance);
+  const cOther = parseFormattedNumber(otherFees);
 
   const simulationSummaryItems: SimulationSummaryItem[] = [
     {
@@ -497,33 +486,30 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200">{t.lblFob}</label>
-              <input
-                type="number"
+              <NumericInput
                 value={fob}
-                onChange={(e) => setFob(e.target.value)}
-                placeholder="50000"
+                onChange={setFob}
+                placeholder="0,000"
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-sky-500 outline-none"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200">{t.lblFreight}</label>
-              <input
-                type="number"
+              <NumericInput
                 value={freight}
-                onChange={(e) => setFreight(e.target.value)}
-                placeholder="4500"
+                onChange={setFreight}
+                placeholder="0,000"
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-sky-500 outline-none"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200">{t.lblInsurance}</label>
-              <input
-                type="number"
+              <NumericInput
                 value={insurance}
-                onChange={(e) => setInsurance(e.target.value)}
-                placeholder="800"
+                onChange={setInsurance}
+                placeholder="0,000"
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-sky-500 outline-none"
               />
             </div>
@@ -538,33 +524,30 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200">{t.lblCustoms}</label>
-              <input
-                type="number"
+              <NumericInput
                 value={customsRate}
-                onChange={(e) => setCustomsRate(e.target.value)}
-                placeholder="10"
+                onChange={setCustomsRate}
+                placeholder="0,000"
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-amber-500 outline-none"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200">{t.lblIec}</label>
-              <input
-                type="number"
+              <NumericInput
                 value={iecRate}
-                onChange={(e) => setIecRate(e.target.value)}
-                placeholder="0"
+                onChange={setIecRate}
+                placeholder="0,000"
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-amber-500 outline-none"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200">{t.lblFees}</label>
-              <input
-                type="number"
+              <NumericInput
                 value={otherFees}
-                onChange={(e) => setOtherFees(e.target.value)}
-                placeholder="1200"
+                onChange={setOtherFees}
+                placeholder="0,000"
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-amber-500 outline-none"
               />
             </div>
@@ -575,25 +558,20 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-300">{t.lblImpMargin} (%)</label>
-            <input
-              type="number"
+            <NumericInput
               value={marginPct}
-              onChange={(e) => setMarginPct(e.target.value)}
-              placeholder="30"
+              onChange={setMarginPct}
+              placeholder="0,000"
               className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-indigo-500 outline-none"
             />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-300">Taxa TPA / Banco (%)</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="20"
+            <NumericInput
               value={tpaRate}
-              onChange={(e) => setTpaRate(e.target.value)}
-              placeholder="1.0"
+              onChange={setTpaRate}
+              placeholder="0,000"
               className="w-full bg-slate-900 border border-slate-700 text-indigo-300 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-indigo-500 outline-none"
             />
           </div>

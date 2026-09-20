@@ -57,7 +57,7 @@ router.post('/ping', (req: AuthRequest, res: Response) => {
     activeClients.set(sessionId, {
       sessionId,
       userId: user?.id,
-      name: userName || user?.name || 'Cliente',
+      name: userName || user?.name || 'Utilizador',
       email: userEmail || user?.email,
       lastSeen: Date.now()
     });
@@ -151,7 +151,7 @@ router.post('/send', (req: AuthRequest, res: Response) => {
         id: `tkt_offline_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
         userId: req.user?.id,
         name,
-        email: email || 'cliente.chat@nanucloud.com',
+        email: email || 'utilizador.chat@nanucloud.com',
         phone: req.user?.phone || '',
         subject: `[Chat Offline] Atendimento #${ticketNumber} - ${name}`,
         message: text.trim(),
@@ -186,7 +186,7 @@ router.post('/send', (req: AuthRequest, res: Response) => {
   }
 });
 
-// 5. STAFF RESPONDE AO CHAT DE UM CLIENTE ESPECÍFICO (DIRETO)
+// 5. STAFF RESPONDE AO CHAT DE UM UTILIZADOR ESPECÍFICO (DIRETO)
 router.post('/admin-reply', (req: AuthRequest, res: Response) => {
   try {
     if (!req.user || !isStaffOrAdmin(req.user)) {
@@ -280,7 +280,7 @@ router.get('/admin/sessions', (req: AuthRequest, res: Response) => {
     if (!sessionMap[m.sessionId]) {
       sessionMap[m.sessionId] = {
         sessionId: m.sessionId,
-        userName: m.senderType === 'user' ? m.senderName : 'Cliente',
+        userName: m.senderType === 'user' ? m.senderName : 'Utilizador',
         userEmail: m.userEmail,
         isOnline: isClientOnline,
         lastMessage: m.text,
@@ -315,7 +315,7 @@ router.get('/admin/sessions', (req: AuthRequest, res: Response) => {
         userName: pres.name,
         userEmail: pres.email,
         isOnline: true,
-        lastMessage: '(Cliente online no chat)',
+        lastMessage: '(Utilizador online no chat)',
         lastTime: new Date(pres.lastSeen).toISOString(),
         count: 0,
         unreadCount: 0,

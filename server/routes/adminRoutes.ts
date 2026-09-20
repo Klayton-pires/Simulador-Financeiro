@@ -469,7 +469,7 @@ router.put('/users/:id/password', requireAdminLevel2, (req: AuthRequest, res: Re
   }
 });
 
-// 5c. VALIDAR PLANO ESCOLHIDO DO CLIENTE (Staff & Administradores)
+// 5c. VALIDAR PLANO ESCOLHIDO DO UTILIZADOR (Staff & Administradores)
 router.post('/users/:id/validate-plan', requireAdminLevel2, (req: AuthRequest, res: Response) => {
   try {
     const staffOrAdmin = req.user!;
@@ -487,7 +487,7 @@ router.post('/users/:id/validate-plan', requireAdminLevel2, (req: AuthRequest, r
 
     const targetUser = db.findUserById(id) || db.findUserByEmail(id);
     if (!targetUser) {
-      return res.status(404).json({ error: 'Cliente / Utilizador não encontrado no sistema.' });
+      return res.status(404).json({ error: 'Utilizador não encontrado no sistema.' });
     }
 
     const availablePlans = db.getPlans();
@@ -513,10 +513,10 @@ router.post('/users/:id/validate-plan', requireAdminLevel2, (req: AuthRequest, r
     });
 
     if (!updatedUser) {
-      return res.status(500).json({ error: 'Erro ao atualizar dados do cliente.' });
+      return res.status(500).json({ error: 'Erro ao atualizar dados do utilizador.' });
     }
 
-    // Se houver transações pendentes deste cliente para este plano, aprova automaticamente
+    // Se houver transações pendentes deste utilizador para este plano, aprova automaticamente
     const transactions = db.getTransactions();
     const pendingTx = transactions.find(t => 
       (t.userId === targetUser.id || t.userEmail === targetUser.email) && 
@@ -547,7 +547,7 @@ router.post('/users/:id/validate-plan', requireAdminLevel2, (req: AuthRequest, r
     });
   } catch (err: any) {
     console.error('Error validating plan for user:', err);
-    return res.status(500).json({ error: 'Erro ao validar o plano do cliente.' });
+    return res.status(500).json({ error: 'Erro ao validar o plano do utilizador.' });
   }
 });
 
@@ -873,7 +873,7 @@ router.post('/sms-broadcast', requireAdminLevel2, (req: AuthRequest, res: Respon
       targetList = lines
         .map(line => line.trim())
         .filter(Boolean)
-        .map(p => ({ phone: p, name: 'Cliente' }));
+        .map(p => ({ phone: p, name: 'Utilizador' }));
     }
 
     if (targetList.length === 0) {
@@ -884,7 +884,7 @@ router.post('/sms-broadcast', requireAdminLevel2, (req: AuthRequest, res: Respon
     for (const item of targetList) {
       const cleanPhone = item.phone.trim();
       const personalizedMsg = messageTemplate
-        .replace(/{NOME}/g, item.name || 'Prezado(a) Cliente')
+        .replace(/{NOME}/g, item.name || 'Prezado(a) Utilizador')
         .replace(/{TELEFONE}/g, cleanPhone)
         .replace(/{EMPRESA}/g, 'Nanucloud');
 

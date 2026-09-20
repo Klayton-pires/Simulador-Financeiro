@@ -53,13 +53,13 @@ export const DEFAULT_LEGAL_TERMS: LegalTermsConfig = {
       bulletPoints: [
         'Requisito de Provas Concretas: Pedidos de reembolso devem ser submetidos via Ticket de Suporte num prazo máximo de até 7 dias úteis após o pagamento, acompanhados de comprovativo de transação e evidência inequívoca de falha técnica insanável atribuível exclusivamente ao sistema.',
         'Consultas Utilizadas: Planos ou pacotes onde as consultas já tenham sido consumidas pelo utilizador não são elegíveis a reembolso proporcional.',
-        'Resolução Amigável: A nossa equipa de apoio prioriza sempre a compensação imediata em créditos adicionais de consulta ou suporte prioritário personalizado para garantir a máxima satisfação de todos os clientes.'
+        'Resolução Amigável: A nossa equipa de apoio prioriza sempre a compensação imediata em créditos adicionais de consulta ou suporte prioritário personalizado para garantir a máxima satisfação de todos os utilizadores.'
       ]
     },
     {
       id: 'privacy',
       title: '4. Privacidade, Confidencialidade e Dados',
-      content: 'Os dados de simulação e tabelas de custos submetidos pelo utilizador são confidenciais e protegidos por criptografia de ponta a ponta. A NANUCLOUD não comercializa nem partilha informações financeiras ou cadastrais de clientes com terceiros.',
+      content: 'Os dados de simulação e tabelas de custos submetidos pelo utilizador são confidenciais e protegidos por criptografia de ponta a ponta. A NANUCLOUD não comercializa nem partilha informações financeiras ou cadastrais de utilizadores com terceiros.',
       bulletPoints: [
         'Backups e auditoria são geridos em conformidade com as melhores práticas internacionais de proteção de dados.',
         'O utilizador pode a qualquer momento exportar ou solicitar a eliminação dos seus registros de histórico de consultas.'

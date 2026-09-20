@@ -79,11 +79,11 @@ export const ClientCreditNoticeBanner: React.FC<ClientCreditNoticeBannerProps> =
             <div className="font-bold text-rose-300 flex items-center gap-2 font-mono">
               <span>SEM CRÉDITOS NA CONTA (SALDO: 0)</span>
               <span className="text-[10px] px-1.5 py-0.5 bg-rose-500/20 text-rose-200 rounded border border-rose-500/40">
-                Cliente Front-End
+                Utilizador Front-End
               </span>
             </div>
             <p className="text-slate-300 text-[11px] leading-relaxed mt-0.5">
-              Como utilizador cliente, é obrigatório ter créditos ativos na conta para processar qualquer simulação nos módulos. Carregue o seu saldo ou subscreva um plano para desbloquear cálculos imediatos.
+              Como utilizador, é obrigatório ter créditos ativos na conta para processar qualquer simulação nos módulos. Carregue o seu saldo ou subscreva um plano para desbloquear cálculos imediatos.
             </p>
           </div>
         </div>
@@ -105,7 +105,7 @@ export const ClientCreditNoticeBanner: React.FC<ClientCreditNoticeBannerProps> =
     <div className="flex items-center justify-between gap-2 px-3.5 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] font-mono text-slate-400 mb-3">
       <div className="flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span>Conta de Cliente: <strong className="text-slate-200">{user.name}</strong></span>
+        <span>Conta de Utilizador: <strong className="text-slate-200">{user.name}</strong></span>
       </div>
       <div className="flex items-center gap-2">
         <span>Saldo: <strong className="text-amber-400 font-bold">{user.queriesRemaining}</strong> consultas</span>

@@ -36,9 +36,10 @@ import { useLayoutMode } from '../data/layoutMode';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { canUserSimulate } from '../utils/accessControl';
 import { ConfirmSimulationModal, SimulationSummaryItem } from './ConfirmSimulationModal';
-import { saveSimulationToFirestore } from '../services/firebase';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
+import { NumericInput } from './common/NumericInput';
+import { parseFormattedNumber, formatPtNumber } from '../utils/numberFormat';
 
 interface LocalTradeSimulatorProps {
   user: UserSafe | null;
@@ -63,11 +64,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
   const [countryCode, setCountryCode] = useState<string>('AO');
   const [vatRate, setVatRate] = useState<number>(14);
   const [tpaRate, setTpaRate] = useState<number>(0);
-  const [costNet, setCostNet] = useState<string>('10000');
-  const [costGross, setCostGross] = useState<string>('11400');
-  const [marginPct, setMarginPct] = useState<string>('25');
+  const [costNet, setCostNet] = useState<string>('');
+  const [costGross, setCostGross] = useState<string>('');
+  const [marginPct, setMarginPct] = useState<string>('');
   const [fixedPrice, setFixedPrice] = useState<string>('');
-  const [productName, setProductName] = useState<string>('Mercadoria / Artigo Comercial');
+  const [productName, setProductName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [calculationResults, setCalculationResults] = useState<any[] | null>(null);
@@ -87,21 +88,24 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
   const [mealsVatRate, setMealsVatRate] = useState<number>(14);
 
   const [lodgingCost, setLodgingCost] = useState<string>('');
-  const [lodgingDays, setLodgingDays] = useState<string>('1');
+  const [lodgingDays, setLodgingDays] = useState<string>('');
   const [lodgingTaxMode, setLodgingTaxMode] = useState<'without_vat' | 'with_vat' | 'exempt'>('without_vat');
   const [lodgingVatRate, setLodgingVatRate] = useState<number>(14);
 
   const [otherExtrasCost, setOtherExtrasCost] = useState<string>('');
-  const [otherExtrasLabel, setOtherExtrasLabel] = useState<string>('Embalagens / Carga / Taxas diversas');
+  const [otherExtrasLabel, setOtherExtrasLabel] = useState<string>('');
   const [otherExtrasTaxMode, setOtherExtrasTaxMode] = useState<'without_vat' | 'with_vat' | 'exempt'>('without_vat');
   const [otherExtrasVatRate, setOtherExtrasVatRate] = useState<number>(14);
 
   // Bulk vs Retail Packaging Simulation (Available in Advanced Mode)
   const [enableBulkRetail, setEnableBulkRetail] = useState<boolean>(false);
-  const [bulkQuantity, setBulkQuantity] = useState<string>('10');
+  const [bulkQuantity, setBulkQuantity] = useState<string>('');
   const [bulkUnit, setBulkUnit] = useState<string>('Caixas');
-  const [retailUnitsPerBulk, setRetailUnitsPerBulk] = useState<string>('24');
+  const [retailUnitsPerBulk, setRetailUnitsPerBulk] = useState<string>('');
   const [retailUnit, setRetailUnit] = useState<string>('Unidades');
+  const [bulkCostMode, setBulkCostMode] = useState<'lot_total' | 'per_bulk'>('lot_total');
+  const [bulkMarginPct, setBulkMarginPct] = useState<string>('');
+  const [retailMarginPct, setRetailMarginPct] = useState<string>('');
 
   // Allocation / Inclusion Percentages for Extra Costs (Available in Advanced Mode)
   const [enableCostAbsorption, setEnableCostAbsorption] = useState<boolean>(false);
@@ -138,7 +142,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
       setOtherExtrasVatRate(defaultVat);
       setTpaRate(country.tpa || 0);
       if (costNet) {
-        recalcGrossFromNet(parseFloat(costNet) || 0, defaultVat);
+        recalcGrossFromNet(parseFormattedNumber(costNet), defaultVat);
       }
     }
   }, [countryCode, countryVersion]);
@@ -158,7 +162,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
       return;
     }
     const gross = net * (1 + vRate / 100);
-    setCostGross(gross.toFixed(2));
+    setCostGross(formatPtNumber(gross, 3, false));
   };
 
   const handleNetInput = (val: string) => {
@@ -167,11 +171,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     clearFieldError('pricing');
     setCalculationResults(null);
     setSuccessMessage(null);
-    if (!val || parseFloat(val) <= 0) {
+    const num = parseFormattedNumber(val);
+    if (num <= 0) {
       setCostGross('');
       return;
     }
-    const num = parseFloat(val) || 0;
     recalcGrossFromNet(num, vatRate);
   };
 
@@ -181,13 +185,13 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     clearFieldError('pricing');
     setCalculationResults(null);
     setSuccessMessage(null);
-    if (!val || parseFloat(val) <= 0) {
+    const num = parseFormattedNumber(val);
+    if (num <= 0) {
       setCostNet('');
       return;
     }
-    const num = parseFloat(val) || 0;
     const net = num / (1 + vatRate / 100);
-    setCostNet(net.toFixed(2));
+    setCostNet(formatPtNumber(net, 3, false));
   };
 
   const handleVatChange = (newVat: number) => {
@@ -196,7 +200,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     setCalculationResults(null);
     setSuccessMessage(null);
     if (costNet) {
-      const net = parseFloat(costNet) || 0;
+      const net = parseFormattedNumber(costNet);
       recalcGrossFromNet(net, newVat);
     }
   };
@@ -204,8 +208,8 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
   const formatMoney = (val: number) => {
     return (
       new Intl.NumberFormat('pt-PT', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3
       }).format(val) + ` ${country.curr}`
     );
   };
@@ -243,15 +247,15 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
       };
     }
 
-    const tRawUnit = parseFloat(transportCost) || 0;
+    const tRawUnit = parseFormattedNumber(transportCost);
     const tVal = tRawUnit * (transportRoundTrip ? 2 : 1);
-    const mVal = parseFloat(mealsCost) || 0;
+    const mVal = parseFormattedNumber(mealsCost);
     
-    const lDaily = parseFloat(lodgingCost) || 0;
+    const lDaily = parseFormattedNumber(lodgingCost);
     const lDays = Math.max(1, parseInt(lodgingDays) || 1);
-    const lVal = lDaily * lDays;
+    const lVal = lodgingCost ? (lDaily * lDays) : 0;
 
-    const oVal = parseFloat(otherExtrasCost) || 0;
+    const oVal = parseFormattedNumber(otherExtrasCost);
 
     const transport = computeItemTax(tVal, transportTaxMode, transportVatRate);
     const meals = computeItemTax(mVal, mealsTaxMode, mealsVatRate);
@@ -263,10 +267,10 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     const totalExtraPaid = transport.total + meals.total + lodging.total + otherExtras.total;
 
     // Inclusion / Absorption percentages for price formation
-    const tPct = enableCostAbsorption ? Math.max(0, Math.min(100, parseFloat(transportInclusionPct) || 0)) : 100;
-    const mPct = enableCostAbsorption ? Math.max(0, Math.min(100, parseFloat(mealsInclusionPct) || 0)) : 100;
-    const lPct = enableCostAbsorption ? Math.max(0, Math.min(100, parseFloat(lodgingInclusionPct) || 0)) : 100;
-    const oPct = enableCostAbsorption ? Math.max(0, Math.min(100, parseFloat(otherExtrasInclusionPct) || 0)) : 100;
+    const tPct = enableCostAbsorption ? Math.max(0, Math.min(100, parseFormattedNumber(transportInclusionPct) || 0)) : 100;
+    const mPct = enableCostAbsorption ? Math.max(0, Math.min(100, parseFormattedNumber(mealsInclusionPct) || 0)) : 100;
+    const lPct = enableCostAbsorption ? Math.max(0, Math.min(100, parseFormattedNumber(lodgingInclusionPct) || 0)) : 100;
+    const oPct = enableCostAbsorption ? Math.max(0, Math.min(100, parseFormattedNumber(otherExtrasInclusionPct) || 0)) : 100;
 
     const transportPassedNet = transport.net * (tPct / 100);
     const mealsPassedNet = meals.net * (mPct / 100);
@@ -300,72 +304,142 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     extraBreakdown?: ReturnType<typeof getEffectiveExtraCosts>
   ) => {
     const extras = extraBreakdown || getEffectiveExtraCosts();
+
+    // Determine base merchandise cost (handling per-box vs lot-total when bulk is enabled)
+    const bQty = Math.max(1, parseFormattedNumber(bulkQuantity) || 1);
+    const rUnitsPerB = Math.max(1, parseFormattedNumber(retailUnitsPerBulk) || 1);
+    const totalRetailUnits = enableBulkRetail ? (bQty * rUnitsPerB) : 1;
+
+    let baseMerchandiseCostNet = cNet;
+    if (enableBulkRetail && bulkCostMode === 'per_bulk') {
+      baseMerchandiseCostNet = cNet * bQty;
+    }
+
     // Price base uses passed extra costs (or total if absorption is disabled)
-    const priceFormingCostNet = cNet + extras.totalExtraNetPassedToPrice;
-    const totalRealAcquisitionCostNet = cNet + extras.totalExtraNet;
+    const priceFormingCostNet = baseMerchandiseCostNet + extras.totalExtraNetPassedToPrice;
+    const totalRealAcquisitionCostNet = baseMerchandiseCostNet + extras.totalExtraNet;
 
     let pvpBase = 0;
     let pvpFinal = 0;
     let vatSale = 0;
-    let profit = 0;
+    let profitBeforeTax = 0;
     let actualMargin = 0;
 
     if (fixPrice > 0) {
       pvpFinal = fixPrice;
       pvpBase = pvpFinal / (1 + vRate / 100);
       vatSale = pvpFinal - pvpBase;
-      profit = pvpBase - priceFormingCostNet;
-      actualMargin = priceFormingCostNet > 0 ? (profit / priceFormingCostNet) * 100 : 0;
+      profitBeforeTax = pvpBase - priceFormingCostNet;
+      actualMargin = priceFormingCostNet > 0 ? (profitBeforeTax / priceFormingCostNet) * 100 : 0;
     } else {
-      profit = priceFormingCostNet * (mPct / 100);
-      pvpBase = priceFormingCostNet + profit;
+      profitBeforeTax = priceFormingCostNet * (mPct / 100);
+      pvpBase = priceFormingCostNet + profitBeforeTax;
       vatSale = pvpBase * (vRate / 100);
       pvpFinal = pvpBase + vatSale;
       actualMargin = mPct;
     }
 
-    const merchandiseVatCost = cNet * (vRate / 100);
+    const merchandiseVatCost = baseMerchandiseCostNet * (vRate / 100);
     const totalInputVatSupported = merchandiseVatCost + extras.totalExtraVat;
     const netVatToPay = Math.max(0, vatSale - totalInputVatSupported);
     const tpaCost = pvpFinal * (tRate / 100);
     
     // Operating profit deducts absorbed logistics if any
-    const operatingProfit = profit - tpaCost - extras.totalExtraNetAbsorbed;
+    const operatingProfit = profitBeforeTax - tpaCost - extras.totalExtraNetAbsorbed;
     const incomeTax = operatingProfit > 0 ? operatingProfit * (iiRate / 100) : 0;
     const netProfit = operatingProfit - incomeTax;
 
     // Bulk vs Retail Unit decomposition
-    const bQty = Math.max(1, parseFloat(bulkQuantity) || 1);
-    const rUnitsPerB = Math.max(1, parseFloat(retailUnitsPerBulk) || 1);
-    const totalRetailUnits = enableBulkRetail ? (bQty * rUnitsPerB) : 1;
+    const bMargin = bulkMarginPct !== '' ? (parseFormattedNumber(bulkMarginPct) || actualMargin) : actualMargin;
+    const rMargin = retailMarginPct !== '' ? (parseFormattedNumber(retailMarginPct) || (actualMargin > 0 ? actualMargin + 10 : 35)) : (actualMargin > 0 ? actualMargin + 10 : 35);
+
+    // Wholesale (Venda a Grosso - por Caixa / Lote)
+    const costPerBulkNet = totalRealAcquisitionCostNet / bQty;
+    const costPerBulkGross = (totalRealAcquisitionCostNet + totalInputVatSupported) / bQty;
+    const bulkProfitBeforeTax = costPerBulkNet * (bMargin / 100);
+    const bulkPvpBase = costPerBulkNet + bulkProfitBeforeTax;
+    const bulkVat = bulkPvpBase * (vRate / 100);
+    const bulkPvpFinal = bulkPvpBase + bulkVat;
+    const bulkTpa = bulkPvpFinal * (tRate / 100);
+    const bulkOperatingProfit = bulkProfitBeforeTax - bulkTpa;
+    const bulkII = bulkOperatingProfit > 0 ? bulkOperatingProfit * (iiRate / 100) : 0;
+    const bulkNetProfit = bulkOperatingProfit - bulkII;
+
+    const bulkTotalSalesNet = bulkPvpBase * bQty;
+    const bulkTotalSalesGross = bulkPvpFinal * bQty;
+    const bulkTotalProfitBeforeTax = bulkProfitBeforeTax * bQty;
+    const bulkTotalNetProfit = bulkNetProfit * bQty;
+
+    // Retail (Venda a Retalho - por Unidade individual)
+    const costPerRetailUnitNet = totalRealAcquisitionCostNet / totalRetailUnits;
+    const costPerRetailUnitGross = (totalRealAcquisitionCostNet + totalInputVatSupported) / totalRetailUnits;
+    const retailProfitBeforeTax = costPerRetailUnitNet * (rMargin / 100);
+    const retailPvpBase = costPerRetailUnitNet + retailProfitBeforeTax;
+    const retailVat = retailPvpBase * (vRate / 100);
+    const retailPvpFinal = retailPvpBase + retailVat;
+    const retailTpa = retailPvpFinal * (tRate / 100);
+    const retailOperatingProfit = retailProfitBeforeTax - retailTpa;
+    const retailII = retailOperatingProfit > 0 ? retailOperatingProfit * (iiRate / 100) : 0;
+    const retailNetProfit = retailOperatingProfit - retailII;
+
+    const retailTotalSalesNet = retailPvpBase * totalRetailUnits;
+    const retailTotalSalesGross = retailPvpFinal * totalRetailUnits;
+    const retailTotalProfitBeforeTax = retailProfitBeforeTax * totalRetailUnits;
+    const retailTotalNetProfit = retailNetProfit * totalRetailUnits;
+
+    const extraRevenueAtRetail = retailTotalSalesGross - bulkTotalSalesGross;
+    const extraProfitAtRetail = retailTotalNetProfit - bulkTotalNetProfit;
 
     const retailDecomposition = {
       isEnabled: enableBulkRetail,
+      bulkCostMode,
       bulkQty: bQty,
-      bulkUnit: bulkUnit || 'Lotes',
+      bulkUnit: bulkUnit || 'Caixas',
+      bulkMargin: bMargin,
       retailUnitsPerBulk: rUnitsPerB,
       retailUnit: retailUnit || 'Unidades',
+      retailMargin: rMargin,
       totalRetailUnits,
-      costPerBulkNet: totalRealAcquisitionCostNet / bQty,
-      costPerRetailUnitNet: totalRealAcquisitionCostNet / totalRetailUnits,
-      merchandiseCostPerRetailUnitNet: cNet / totalRetailUnits,
-      extrasCostPerRetailUnitNet: extras.totalExtraNet / totalRetailUnits,
-      pvpFinalPerRetailUnit: pvpFinal / totalRetailUnits,
-      pvpBasePerRetailUnit: pvpBase / totalRetailUnits,
-      vatPerRetailUnit: vatSale / totalRetailUnits,
-      netProfitPerRetailUnit: netProfit / totalRetailUnits
+      // Grosso
+      costPerBulkNet,
+      costPerBulkGross,
+      bulkProfitBeforeTax,
+      bulkPvpBase,
+      bulkVat,
+      bulkPvpFinal,
+      bulkNetProfit,
+      bulkTotalSalesNet,
+      bulkTotalSalesGross,
+      bulkTotalProfitBeforeTax,
+      bulkTotalNetProfit,
+      // Retalho
+      costPerRetailUnitNet,
+      costPerRetailUnitGross,
+      retailProfitBeforeTax,
+      retailPvpBase,
+      retailVat,
+      retailPvpFinal,
+      retailNetProfit,
+      retailTotalSalesNet,
+      retailTotalSalesGross,
+      retailTotalProfitBeforeTax,
+      retailTotalNetProfit,
+      // Comparativo
+      extraRevenueAtRetail,
+      extraProfitAtRetail
     };
 
     return {
       costNet: priceFormingCostNet,
-      merchandiseCostNet: cNet,
+      merchandiseCostNet: baseMerchandiseCostNet,
       merchandiseVatCost,
       totalEffectiveCostNet: priceFormingCostNet,
       totalRealAcquisitionCostNet,
       extras,
       totalInputVatSupported,
       vatCost: totalInputVatSupported,
-      profit,
+      profit: profitBeforeTax,
+      profitBeforeTax,
       marginApplied: actualMargin,
       pvpBase,
       pvpFinal,
@@ -396,8 +470,8 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     setSuccessMessage(null);
 
     const errors: Record<string, string> = {};
-    const net = parseFloat(costNet) || 0;
-    const fPrice = parseFloat(fixedPrice) || 0;
+    const net = parseFormattedNumber(costNet);
+    const fPrice = parseFormattedNumber(fixedPrice);
 
     if (!costNet || costNet.trim() === '') {
       errors.costNet = 'Campo obrigatório: introduza o Preço de Custo Base (SEM IVA).';
@@ -421,12 +495,16 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
 
     setFieldErrors({});
 
-    // AUTH & RBAC SIMULATION CHECK - Allows free demo credits without login
-    const simCheck = canUserSimulate(user);
-    if (!simCheck.allowed) {
-      setErrorMessage(simCheck.message);
-      setShowExhaustedModal(true);
-      return;
+    // AUTH & RBAC SIMULATION CHECK - No free consultations without registration
+    const isStaffOrAdmin = user?.role === 'staff' || user?.role === 'admin' || user?.role === 'admin_level1' || user?.role === 'admin_level2' || user?.role === 'super_admin';
+    const isGuest = !user || user.id === 'visitante_anonimo';
+
+    if (!isStaffOrAdmin) {
+      if (isGuest || (user?.queriesRemaining || 0) <= 0) {
+        setErrorMessage('Não existem consultas gratuitas sem registo. Crie a sua conta de utilizador para receber o seu Bónus de Inscrição gratuito e começar a simular!');
+        setShowExhaustedModal(true);
+        return;
+      }
     }
 
     // Open confirmation modal to confirm simulation before processing results
@@ -438,9 +516,9 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     setIsCalculating(true);
     setErrorMessage(null);
 
-    const net = parseFloat(costNet) || 0;
-    const fPrice = parseFloat(fixedPrice) || 0;
-    const mPct = parseFloat(marginPct) || 0;
+    const net = parseFormattedNumber(costNet);
+    const fPrice = parseFormattedNumber(fixedPrice);
+    const mPct = parseFormattedNumber(marginPct);
 
     try {
       let remaining = user?.queriesRemaining ?? 0;
@@ -449,6 +527,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            userId: user?.id,
             countryCode,
             costNet: net,
             vatRate,
@@ -458,17 +537,17 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
             productName,
             notes,
             // Optional logistics and acquisition costs (Advanced Mode)
-            transportCost: layoutMode === 'advanced' ? parseFloat(transportCost) || 0 : 0,
+            transportCost: layoutMode === 'advanced' ? parseFormattedNumber(transportCost) : 0,
             transportRoundTrip: layoutMode === 'advanced' ? transportRoundTrip : false,
             transportTaxMode: layoutMode === 'advanced' ? transportTaxMode : 'without_vat',
             transportVatRate: layoutMode === 'advanced' ? transportVatRate : vatRate,
-            mealsCost: layoutMode === 'advanced' ? parseFloat(mealsCost) || 0 : 0,
+            mealsCost: layoutMode === 'advanced' ? parseFormattedNumber(mealsCost) : 0,
             mealsTaxMode: layoutMode === 'advanced' ? mealsTaxMode : 'without_vat',
             mealsVatRate: layoutMode === 'advanced' ? mealsVatRate : vatRate,
-            lodgingCost: layoutMode === 'advanced' ? parseFloat(lodgingCost) || 0 : 0,
+            lodgingCost: layoutMode === 'advanced' ? parseFormattedNumber(lodgingCost) : 0,
             lodgingTaxMode: layoutMode === 'advanced' ? lodgingTaxMode : 'without_vat',
             lodgingVatRate: layoutMode === 'advanced' ? lodgingVatRate : vatRate,
-            otherExtrasCost: layoutMode === 'advanced' ? parseFloat(otherExtrasCost) || 0 : 0,
+            otherExtrasCost: layoutMode === 'advanced' ? parseFormattedNumber(otherExtrasCost) : 0,
             otherExtrasLabel: layoutMode === 'advanced' ? otherExtrasLabel : '',
             otherExtrasTaxMode: layoutMode === 'advanced' ? otherExtrasTaxMode : 'without_vat',
             otherExtrasVatRate: layoutMode === 'advanced' ? otherExtrasVatRate : vatRate
@@ -529,17 +608,6 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
 
       if (user) {
         onCalculationDone(remaining);
-        // Persist simulation to Cloud Firestore
-        saveSimulationToFirestore(user.id, 'local_trade', {
-          country: countryCode,
-          productName: productName || 'Artigo Comercial',
-          costNet: net,
-          marginPct: mPct,
-          fixedFinalPrice: fPrice,
-          vatRate,
-          tpaRate,
-          scenariosCount: scenarios.length
-        }).catch(() => {});
       } else {
         const left = consumeGuestCredit();
         if (left === 0) {
@@ -558,9 +626,9 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
   const activeResults = calculationResults;
   const currentExtras = getEffectiveExtraCosts();
 
-  const netNum = parseFloat(costNet) || 0;
-  const fPriceNum = parseFloat(fixedPrice) || 0;
-  const grossNum = parseFloat(costGross) || 0;
+  const netNum = parseFormattedNumber(costNet);
+  const fPriceNum = parseFormattedNumber(fixedPrice);
+  const grossNum = parseFormattedNumber(costGross);
 
   const simulationSummaryItems: SimulationSummaryItem[] = [
     {
@@ -592,7 +660,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     });
   }
 
-  if (enableBulkRetail && parseFloat(bulkQuantity) > 0) {
+  if (enableBulkRetail && parseFormattedNumber(bulkQuantity) > 0) {
     simulationSummaryItems.push({
       label: 'Desdobramento Grosso vs Retalho',
       value: `${bulkQuantity} ${bulkUnit} (${retailUnitsPerBulk} ${retailUnit}/lote)`
@@ -776,7 +844,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     calculatedFields.push(
       { label: 'Lucro Bruto Comercial', amount: calc.profit, rateOrMargin: `${calc.marginApplied.toFixed(1)}%`, fiscalDestiny: 'Margem Comercial' },
       { label: 'PREÇO BASE DE VENDA (SEM IVA)', amount: calc.pvpBase, rateOrMargin: 'Subtotal Líquido', fiscalDestiny: 'Receita Líquida Comercial' },
-      { label: 'IVA Cobrado ao Cliente', amount: calc.vatSale, rateOrMargin: `${vatRate}%`, fiscalDestiny: country.agency },
+      { label: 'IVA Liquidado na Faturação / Venda', amount: calc.vatSale, rateOrMargin: `${vatRate}%`, fiscalDestiny: country.agency },
       { label: 'PREÇO TOTAL FATURADO (PVP COM IVA)', amount: calc.pvpFinal, rateOrMargin: 'PVP Final', fiscalDestiny: 'Venda ao Público' },
       { label: 'Taxa Bancária TPA', amount: calc.tpaCost, rateOrMargin: `${tpaRate}%`, fiscalDestiny: 'Dedução Bancária' },
       { label: 'Crédito IVA Suportado (Dedutível)', amount: calc.totalInputVatSupported, rateOrMargin: 'IVA Suportado', fiscalDestiny: 'Crédito Fiscal' },
@@ -964,15 +1032,14 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
               {t.lblTpa} {layoutMode === 'friendly' ? '(Opcional)' : '(Padrão 0%)'}
             </label>
             <div className="relative">
-              <input
-                type="number"
+              <NumericInput
                 value={tpaRate}
-                onChange={(e) => {
-                  setTpaRate(parseFloat(e.target.value) || 0);
+                onChange={(val) => {
+                  setTpaRate(val);
                   clearFieldError('tpaRate');
                 }}
-                step="0.1"
-                min="0"
+                placeholder="0"
+                maxDecimals={3}
                 className={`w-full bg-[#0F172A] border rounded-lg px-3 py-2 text-xs font-mono focus:border-indigo-500 outline-none transition ${
                   fieldErrors.tpaRate ? 'border-rose-500 bg-rose-950/20 text-rose-100 ring-2 ring-rose-500/20' : 'border-slate-800 text-slate-100'
                 }`}
@@ -999,12 +1066,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                 <label className="text-[11px] text-slate-400 font-mono flex items-center justify-between">
                   <span>{t.lblCostNet} (SEM IVA) *</span>
                 </label>
-                <input
-                  type="number"
+                <NumericInput
                   value={costNet}
-                  onChange={(e) => handleNetInput(e.target.value)}
-                  placeholder={`Ex: 10000 (${country.curr})`}
-                  step="any"
+                  onChange={(val, formatted) => handleNetInput(formatted)}
+                  placeholder={`Ex: 10.000,000 (${country.curr})`}
+                  maxDecimals={3}
                   className={`w-full bg-slate-900 border rounded-lg px-3 py-2.5 text-xs font-mono focus:border-indigo-500 outline-none transition ${
                     fieldErrors.costNet ? 'border-rose-500 bg-rose-950/20 text-rose-100 ring-2 ring-rose-500/20' : 'border-slate-700 text-slate-100'
                   }`}
@@ -1019,12 +1085,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
 
               <div className="space-y-1.5">
                 <label className="text-[11px] text-slate-400 font-mono">{t.lblCostGross} (COM IVA)</label>
-                <input
-                  type="number"
+                <NumericInput
                   value={costGross}
-                  onChange={(e) => handleGrossInput(e.target.value)}
-                  placeholder={`Ex: 11400 (${country.curr})`}
-                  step="any"
+                  onChange={(val, formatted) => handleGrossInput(formatted)}
+                  placeholder={`Ex: 11.400,000 (${country.curr})`}
+                  maxDecimals={3}
                   className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2.5 text-xs font-mono focus:border-indigo-500 outline-none transition"
                 />
               </div>
@@ -1072,12 +1137,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                         <label className="text-[10px] text-slate-400 font-mono block mb-1">
                           Valor {transportRoundTrip ? '(Por Viagem)' : ''}
                         </label>
-                        <input
-                          type="number"
+                        <NumericInput
                           value={transportCost}
-                          onChange={(e) => setTransportCost(e.target.value)}
-                          placeholder={`0.00 (${country.curr})`}
-                          step="any"
+                          onChange={(val, formatted) => setTransportCost(formatted)}
+                          placeholder={`0,000 (${country.curr})`}
+                          maxDecimals={3}
                           className="w-full bg-[#0F172A] border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                         />
                       </div>
@@ -1124,12 +1188,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="text-[10px] text-slate-400 font-mono block mb-1">Valor Total</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           value={mealsCost}
-                          onChange={(e) => setMealsCost(e.target.value)}
-                          placeholder={`0.00 (${country.curr})`}
-                          step="any"
+                          onChange={(val, formatted) => setMealsCost(formatted)}
+                          placeholder={`0,000 (${country.curr})`}
+                          maxDecimals={3}
                           className="w-full bg-[#0F172A] border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                         />
                       </div>
@@ -1171,19 +1234,18 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                         <span>Estadia / Hospedaria / Hotel</span>
                       </div>
                       <span className="text-[10px] text-slate-400 font-mono">
-                        Total: {formatMoney((parseFloat(lodgingCost) || 0) * Math.max(1, parseInt(lodgingDays) || 1))}
+                        Total: {formatMoney((parseFormattedNumber(lodgingCost)) * Math.max(1, parseInt(lodgingDays) || 1))}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <label className="text-[10px] text-slate-400 font-mono block mb-1">Preço / Noite</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           value={lodgingCost}
-                          onChange={(e) => setLodgingCost(e.target.value)}
-                          placeholder={`0.00 (${country.curr})`}
-                          step="any"
+                          onChange={(val, formatted) => setLodgingCost(formatted)}
+                          placeholder={`0,000 (${country.curr})`}
+                          maxDecimals={3}
                           className="w-full bg-[#0F172A] border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                         />
                       </div>
@@ -1241,12 +1303,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="text-[10px] text-slate-400 font-mono block mb-1">Valor</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           value={otherExtrasCost}
-                          onChange={(e) => setOtherExtrasCost(e.target.value)}
-                          placeholder={`0.00 (${country.curr})`}
-                          step="any"
+                          onChange={(val, formatted) => setOtherExtrasCost(formatted)}
+                          placeholder={`0,000 (${country.curr})`}
+                          maxDecimals={3}
                           className="w-full bg-[#0F172A] border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                         />
                       </div>
@@ -1285,15 +1346,15 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                         Consolidação Efetiva dos Custos de Aquisição:
                       </span>
                       <div className="text-[11px] text-slate-300 flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span>Mercadoria: <strong className="text-slate-100 font-bold">{formatMoney(parseFloat(costNet) || 0)}</strong></span>
+                        <span>Mercadoria: <strong className="text-slate-100 font-bold">{formatMoney(parseFormattedNumber(costNet))}</strong></span>
                         <span>+ Logística/Extras: <strong className="text-amber-300 font-bold">{formatMoney(currentExtras.totalExtraNet)}</strong></span>
-                        <span>(=) Base Efetiva: <strong className="text-emerald-400 font-bold">{formatMoney((parseFloat(costNet) || 0) + currentExtras.totalExtraNet)}</strong></span>
+                        <span>(=) Base Efetiva: <strong className="text-emerald-400 font-bold">{formatMoney(parseFormattedNumber(costNet) + currentExtras.totalExtraNet)}</strong></span>
                       </div>
                     </div>
                     <div className="text-right sm:self-center bg-indigo-500/10 px-3 py-1.5 rounded border border-indigo-500/20">
                       <span className="text-[10px] text-slate-400 block">IVA Dedutível Suportado:</span>
                       <span className="text-xs font-bold text-indigo-300 font-mono">
-                        {formatMoney(((parseFloat(costNet) || 0) * (vatRate / 100)) + currentExtras.totalExtraVat)}
+                        {formatMoney((parseFormattedNumber(costNet) * (vatRate / 100)) + currentExtras.totalExtraVat)}
                       </span>
                     </div>
                   </div>
@@ -1325,15 +1386,45 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                         Defina as quantidades de compra no lote a grosso e o desdobramento por unidades de venda a retalho para calcular o preço unitário e o lucro por artigo individual.
                       </p>
 
+                      {/* Mode selector: Is the costNet the total lot cost or the cost per bulk unit? */}
+                      <div className="bg-slate-900/90 p-3 rounded-lg border border-slate-800 space-y-2">
+                        <label className="text-[11px] font-bold text-slate-200 font-mono block">
+                          O Preço de Custo Base introduzido no Campo 1 refere-se a:
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition ${bulkCostMode === 'lot_total' ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-200' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>
+                            <input
+                              type="radio"
+                              name="bulkCostMode"
+                              value="lot_total"
+                              checked={bulkCostMode === 'lot_total'}
+                              onChange={() => setBulkCostMode('lot_total')}
+                              className="text-indigo-600 focus:ring-0"
+                            />
+                            <span className="text-xs font-mono">Custo TOTAL de todo o Lote (ex: valor de todas as caixas)</span>
+                          </label>
+                          <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition ${bulkCostMode === 'per_bulk' ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-200' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>
+                            <input
+                              type="radio"
+                              name="bulkCostMode"
+                              value="per_bulk"
+                              checked={bulkCostMode === 'per_bulk'}
+                              onChange={() => setBulkCostMode('per_bulk')}
+                              className="text-indigo-600 focus:ring-0"
+                            />
+                            <span className="text-xs font-mono">Custo UNITÁRIO por {bulkUnit || 'Caixa'} (multiplica pela quantidade)</span>
+                          </label>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
                         <div>
                           <label className="text-[10px] text-slate-400 font-mono block mb-1">Qtd. Compra a Grosso</label>
-                          <input
-                            type="number"
+                          <NumericInput
                             value={bulkQuantity}
-                            onChange={(e) => setBulkQuantity(e.target.value)}
+                            onChange={(val, formatted) => setBulkQuantity(formatted)}
                             placeholder="Ex: 10"
-                            min="1"
+                            maxDecimals={3}
                             className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                           />
                         </div>
@@ -1356,12 +1447,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                         </div>
                         <div>
                           <label className="text-[10px] text-slate-400 font-mono block mb-1">Unidades por Lote</label>
-                          <input
-                            type="number"
+                          <NumericInput
                             value={retailUnitsPerBulk}
-                            onChange={(e) => setRetailUnitsPerBulk(e.target.value)}
+                            onChange={(val, formatted) => setRetailUnitsPerBulk(formatted)}
                             placeholder="Ex: 24"
-                            min="1"
+                            maxDecimals={3}
                             className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                           />
                         </div>
@@ -1384,9 +1474,37 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                         </div>
                       </div>
 
+                      {/* Margens diferenciadas para Grosso vs Retalho */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-900/60 p-2.5 rounded border border-slate-800/80">
+                        <div>
+                          <label className="text-[10px] text-indigo-300 font-mono block mb-1 font-bold">
+                            Margem de Venda a Grosso (%) <span className="text-slate-500 font-normal">(Opcional)</span>
+                          </label>
+                          <NumericInput
+                            value={bulkMarginPct}
+                            onChange={(val, formatted) => setBulkMarginPct(formatted)}
+                            placeholder="Ex: 15 (Margem por Caixa)"
+                            maxDecimals={3}
+                            className="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-emerald-300 font-mono block mb-1 font-bold">
+                            Margem de Venda a Retalho (%) <span className="text-slate-500 font-normal">(Opcional)</span>
+                          </label>
+                          <NumericInput
+                            value={retailMarginPct}
+                            onChange={(val, formatted) => setRetailMarginPct(formatted)}
+                            placeholder="Ex: 35 (Margem no Retalho)"
+                            maxDecimals={3}
+                            className="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded px-2.5 py-1.5 text-xs font-mono focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+                      </div>
+
                       <div className="bg-slate-900 p-2.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 flex flex-wrap items-center justify-between gap-2">
                         <span>
-                          Total de Artigos a Retalho: <strong className="text-indigo-400">{Math.max(1, parseFloat(bulkQuantity) || 1) * Math.max(1, parseFloat(retailUnitsPerBulk) || 1)} {retailUnit}</strong> ({bulkQuantity} {bulkUnit} × {retailUnitsPerBulk} {retailUnit}/{bulkUnit})
+                          Total de Artigos a Retalho: <strong className="text-indigo-400">{(parseFormattedNumber(bulkQuantity)) * (parseFormattedNumber(retailUnitsPerBulk))} {retailUnit}</strong> ({bulkQuantity || '0'} {bulkUnit} × {retailUnitsPerBulk || '0'} {retailUnit}/{bulkUnit})
                         </span>
                       </div>
                     </div>
@@ -1441,18 +1559,17 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                   {t.lblMargin} (Personalizada)
                 </label>
                 <div className="relative">
-                  <input
-                    type="number"
+                  <NumericInput
                     value={marginPct}
-                    onChange={(e) => {
-                      setMarginPct(e.target.value);
+                    onChange={(val, formatted) => {
+                      setMarginPct(formatted);
                       setFixedPrice('');
                       clearFieldError('pricing');
                       setCalculationResults(null);
                       setSuccessMessage(null);
                     }}
                     placeholder="Ex: 25 (%)"
-                    step="any"
+                    maxDecimals={3}
                     className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2.5 text-xs font-mono focus:border-indigo-500 outline-none transition"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-slate-500 font-mono">%</span>
@@ -1466,19 +1583,16 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                   <span className="text-[9px] text-indigo-400 font-mono">Manual %</span>
                 </label>
                 <div className="relative">
-                  <input
-                    type="number"
+                  <NumericInput
                     value={tpaRate}
-                    onChange={(e) => {
-                      setTpaRate(parseFloat(e.target.value) || 0);
+                    onChange={(val) => {
+                      setTpaRate(val);
                       clearFieldError('tpaRate');
                       setCalculationResults(null);
                       setSuccessMessage(null);
                     }}
-                    placeholder="Ex: 1.0 (%)"
-                    step="0.1"
-                    min="0"
-                    max="30"
+                    placeholder="Ex: 1,0"
+                    maxDecimals={3}
                     className="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-bold rounded-lg px-3 py-2.5 text-xs font-mono focus:border-indigo-500 outline-none transition"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-slate-500 font-mono">%</span>
@@ -1488,18 +1602,17 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
               {layoutMode === 'advanced' && (
                 <div className="space-y-1.5 animate-in fade-in">
                   <label className="text-[11px] font-bold text-slate-400 font-mono uppercase tracking-wider">{t.lblFixed}</label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={fixedPrice}
-                    onChange={(e) => {
-                      setFixedPrice(e.target.value);
+                    onChange={(val, formatted) => {
+                      setFixedPrice(formatted);
                       setMarginPct('');
                       clearFieldError('pricing');
                       setCalculationResults(null);
                       setSuccessMessage(null);
                     }}
-                    placeholder={`Ex: 15000 (${country.curr})`}
-                    step="any"
+                    placeholder={`Ex: 15.000,000 (${country.curr})`}
+                    maxDecimals={3}
                     className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2.5 text-xs font-mono focus:border-indigo-500 outline-none transition"
                   />
                 </div>
@@ -1535,49 +1648,41 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div>
                         <label className="text-[10px] text-slate-400 font-mono block mb-1">Transporte (%)</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           value={transportInclusionPct}
-                          onChange={(e) => setTransportInclusionPct(e.target.value)}
+                          onChange={(val, formatted) => setTransportInclusionPct(formatted)}
                           placeholder="100"
-                          min="0"
-                          max="100"
+                          maxDecimals={3}
                           className="w-full bg-[#0F172A] border border-slate-700 text-slate-100 rounded px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                         />
                       </div>
                       <div>
                         <label className="text-[10px] text-slate-400 font-mono block mb-1">Alimentação (%)</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           value={mealsInclusionPct}
-                          onChange={(e) => setMealsInclusionPct(e.target.value)}
+                          onChange={(val, formatted) => setMealsInclusionPct(formatted)}
                           placeholder="100"
-                          min="0"
-                          max="100"
+                          maxDecimals={3}
                           className="w-full bg-[#0F172A] border border-slate-700 text-slate-100 rounded px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                         />
                       </div>
                       <div>
                         <label className="text-[10px] text-slate-400 font-mono block mb-1">Estadia (%)</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           value={lodgingInclusionPct}
-                          onChange={(e) => setLodgingInclusionPct(e.target.value)}
+                          onChange={(val, formatted) => setLodgingInclusionPct(formatted)}
                           placeholder="100"
-                          min="0"
-                          max="100"
+                          maxDecimals={3}
                           className="w-full bg-[#0F172A] border border-slate-700 text-slate-100 rounded px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                         />
                       </div>
                       <div>
                         <label className="text-[10px] text-slate-400 font-mono block mb-1">Outros Extras (%)</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           value={otherExtrasInclusionPct}
-                          onChange={(e) => setOtherExtrasInclusionPct(e.target.value)}
+                          onChange={(val, formatted) => setOtherExtrasInclusionPct(formatted)}
                           placeholder="100"
-                          min="0"
-                          max="100"
+                          maxDecimals={3}
                           className="w-full bg-[#0F172A] border border-slate-700 text-slate-100 rounded px-2.5 py-1.5 text-xs font-mono focus:border-indigo-500 outline-none"
                         />
                       </div>
@@ -1709,6 +1814,49 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                     </span>
                   </div>
 
+                  {/* Prominent Totals & Profit Badges (With & Without Taxes) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-3">
+                    {/* Total Faturado / Preço de Venda */}
+                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-3 space-y-1.5 shadow-sm">
+                      <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Receipt className="w-3.5 h-3.5 text-cyan-400" />
+                          Total da Venda / Faturação
+                        </span>
+                      </div>
+                      <div className="space-y-1 pt-1">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-slate-400">SEM IMPOSTOS:</span>
+                          <strong className="text-cyan-300 font-bold">{formatMoney(calc.pvpBase)}</strong>
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-mono pt-1 border-t border-slate-800">
+                          <span className="text-emerald-300 font-bold">COM IMPOSTOS:</span>
+                          <strong className="text-emerald-400 font-bold text-sm">{formatMoney(calc.pvpFinal)}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lucro do Comerciante */}
+                    <div className="bg-slate-900/90 border border-slate-700/80 rounded-lg p-3 space-y-1.5 shadow-sm">
+                      <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                          Lucro do Comerciante
+                        </span>
+                      </div>
+                      <div className="space-y-1 pt-1">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-slate-400">SEM IMPOSTOS:</span>
+                          <strong className="text-amber-300 font-bold">{formatMoney(calc.profitBeforeTax)}</strong>
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-mono pt-1 border-t border-slate-800">
+                          <span className="text-emerald-300 font-bold">COM IMPOSTOS (LÍQUIDO):</span>
+                          <strong className="text-emerald-400 font-bold text-sm">{formatMoney(calc.netProfit)}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Visual Distribution Progress Bar (Auto-adjusting & dynamic) */}
                   <div className="space-y-1.5 pt-1">
                     <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
@@ -1776,34 +1924,34 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
 
                           {calc.extras.transport.raw > 0 && (
                             <div className="flex justify-between text-slate-400 text-[11px] pl-2">
-                              <span>• Transporte {calc.extras.transport.isRoundTrip ? '(Ida+Volta)' : ''}</span>
-                              <span className="font-mono">+ {formatMoney(calc.extras.transport.net)}</span>
+                              <span>• Transporte {calc.extras.transport.isRoundTrip ? '(Ida + Volta)' : ''}</span>
+                              <span className="font-mono text-amber-300">+ {formatMoney(calc.extras.transport.net)}</span>
                             </div>
                           )}
 
                           {calc.extras.meals.raw > 0 && (
                             <div className="flex justify-between text-slate-400 text-[11px] pl-2">
                               <span>• Alimentação / Diárias</span>
-                              <span className="font-mono">+ {formatMoney(calc.extras.meals.net)}</span>
+                              <span className="font-mono text-amber-300">+ {formatMoney(calc.extras.meals.net)}</span>
                             </div>
                           )}
 
                           {calc.extras.lodging.raw > 0 && (
                             <div className="flex justify-between text-slate-400 text-[11px] pl-2">
-                              <span>• Estadia / Hospedaria</span>
-                              <span className="font-mono">+ {formatMoney(calc.extras.lodging.net)}</span>
+                              <span>• Estadia / Hospedaria ({calc.extras.lodging.days} {calc.extras.lodging.days > 1 ? 'dias' : 'dia'})</span>
+                              <span className="font-mono text-amber-300">+ {formatMoney(calc.extras.lodging.net)}</span>
                             </div>
                           )}
 
                           {calc.extras.otherExtras.raw > 0 && (
                             <div className="flex justify-between text-slate-400 text-[11px] pl-2">
-                              <span>• {calc.extras.otherExtras.label || 'Outros Custos Extras'}</span>
-                              <span className="font-mono">+ {formatMoney(calc.extras.otherExtras.net)}</span>
+                              <span>• {calc.extras.otherExtras.label || 'Outras Despesas de Aquisição'}</span>
+                              <span className="font-mono text-amber-300">+ {formatMoney(calc.extras.otherExtras.net)}</span>
                             </div>
                           )}
 
                           <div className="flex justify-between text-amber-300 font-bold pt-1 border-t border-slate-800/60">
-                            <span>(=) Custo Efetivo de Aquisição</span>
+                            <span>(=) Custo Efetivo de Aquisição (SEM IVA)</span>
                             <strong className="font-mono">{formatMoney(calc.totalEffectiveCostNet)}</strong>
                           </div>
                         </>
@@ -1815,13 +1963,13 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                       )}
 
                       <div className="flex justify-between text-indigo-300">
-                        <span>(+) Margem de Lucro Bruto ({calc.marginApplied.toFixed(1)}%)</span>
-                        <strong className="font-mono">+ {formatMoney(calc.profit)}</strong>
+                        <span>(+) Margem de Lucro ({calc.marginApplied.toFixed(1)}%)</span>
+                        <strong className="font-mono">+ {formatMoney(calc.profitBeforeTax)}</strong>
                       </div>
 
                       {/* Total SEM IVA */}
-                      <div className="flex justify-between items-center py-1 px-2 rounded bg-slate-900/90 border border-slate-800 text-slate-200">
-                        <span className="text-cyan-300 font-bold">(=) SUB-TOTAL / VENDA LÍQUIDA (SEM IVA):</span>
+                      <div className="flex justify-between items-center py-1.5 px-2 rounded bg-slate-900/90 border border-slate-800 text-slate-200">
+                        <span className="text-cyan-300 font-bold">(=) SUB-TOTAL / VENDA (SEM IMPOSTOS):</span>
                         <strong className="font-mono text-cyan-300 text-xs">{formatMoney(calc.pvpBase)}</strong>
                       </div>
 
@@ -1832,37 +1980,105 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
 
                       {/* Total COM IVA */}
                       <div className="flex justify-between items-center pt-2 border-t border-slate-800 font-bold text-slate-100 text-xs bg-emerald-500/5 p-2 rounded border border-emerald-500/20">
-                        <span className="text-emerald-300">(=) PREÇO TOTAL FATURADO (COM IVA):</span>
+                        <span className="text-emerald-300">(=) PREÇO TOTAL FATURADO (COM IMPOSTOS):</span>
                         <span className="text-emerald-400 font-bold font-mono text-sm">{formatMoney(calc.pvpFinal)}</span>
                       </div>
                     </div>
 
-                    {/* Decomposição por Unidade a Retalho (quando ativada) */}
+                    {/* Módulo Especial: Decomposição Grosso vs Retalho */}
                     {calc.retailDecomposition?.isEnabled && (
-                      <div className="bg-[#0F172A] p-3 rounded-lg border border-indigo-500/30 space-y-1.5">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 flex items-center justify-between">
-                          <span>Decomposição por Unidade a Retalho ({calc.retailDecomposition.retailUnit})</span>
-                          <span className="text-slate-400 font-normal">{calc.retailDecomposition.totalRetailUnits} unid. no lote</span>
-                        </p>
-                        <div className="flex justify-between text-slate-300 text-[11px]">
-                          <span>Custo Unitário (SEM IVA)</span>
-                          <strong className="font-mono">{formatMoney(calc.retailDecomposition.costPerRetailUnitNet)}</strong>
+                      <div className="bg-[#0B132B] p-3.5 rounded-lg border border-indigo-500/40 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2 border-b border-indigo-500/20">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                            <span>Simulação Comparativa: Grosso vs Retalho</span>
+                          </p>
+                          <span className="text-[10px] font-mono text-slate-300 bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">
+                            {calc.retailDecomposition.bulkQty} {calc.retailDecomposition.bulkUnit} = {calc.retailDecomposition.totalRetailUnits} {calc.retailDecomposition.retailUnit}
+                          </span>
                         </div>
-                        <div className="flex justify-between text-cyan-300 text-[11px] font-bold">
-                          <span>Preço Unitário de Venda (SEM IVA)</span>
-                          <strong className="font-mono">{formatMoney(calc.retailDecomposition.pvpBasePerRetailUnit)}</strong>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                          {/* Coluna 1: Venda a Grosso */}
+                          <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-indigo-300 pb-1 border-b border-slate-800">
+                              <span>Venda a Grosso (Por {calc.retailDecomposition.bulkUnit})</span>
+                              <span className="text-[9px] text-slate-400 font-mono">Margem: {calc.retailDecomposition.bulkMargin.toFixed(1)}%</span>
+                            </div>
+                            <div className="flex justify-between text-slate-400 text-[10px]">
+                              <span>Custo por {calc.retailDecomposition.bulkUnit} (SEM IVA)</span>
+                              <strong className="font-mono text-slate-200">{formatMoney(calc.retailDecomposition.costPerBulkNet)}</strong>
+                            </div>
+                            <div className="flex justify-between text-cyan-300 text-[11px]">
+                              <span>PVP por {calc.retailDecomposition.bulkUnit} (SEM IMPOSTOS)</span>
+                              <strong className="font-mono">{formatMoney(calc.retailDecomposition.bulkPvpBase)}</strong>
+                            </div>
+                            <div className="flex justify-between text-emerald-400 text-xs font-bold pt-0.5">
+                              <span>PVP por {calc.retailDecomposition.bulkUnit} (COM IMPOSTOS)</span>
+                              <strong className="font-mono text-sm">{formatMoney(calc.retailDecomposition.bulkPvpFinal)}</strong>
+                            </div>
+                            <div className="flex justify-between text-emerald-300 text-[11px] pt-1 border-t border-slate-800">
+                              <span>Lucro Líquido por {calc.retailDecomposition.bulkUnit}</span>
+                              <strong className="font-mono">{formatMoney(calc.retailDecomposition.bulkNetProfit)}</strong>
+                            </div>
+                            <div className="pt-1.5 border-t border-indigo-500/30 text-[10px] space-y-0.5 bg-indigo-950/20 p-1.5 rounded">
+                              <div className="flex justify-between text-slate-300">
+                                <span>Total Lote ({calc.retailDecomposition.bulkQty} {calc.retailDecomposition.bulkUnit}) SEM IMPOSTOS:</span>
+                                <strong className="font-mono text-cyan-300">{formatMoney(calc.retailDecomposition.bulkTotalSalesNet)}</strong>
+                              </div>
+                              <div className="flex justify-between text-emerald-300 font-bold">
+                                <span>Total Lote COM IMPOSTOS:</span>
+                                <strong className="font-mono">{formatMoney(calc.retailDecomposition.bulkTotalSalesGross)}</strong>
+                              </div>
+                              <div className="flex justify-between text-emerald-400 font-bold pt-0.5">
+                                <span>Lucro Líquido Total do Lote:</span>
+                                <strong className="font-mono">{formatMoney(calc.retailDecomposition.bulkTotalNetProfit)}</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Coluna 2: Venda a Retalho */}
+                          <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-emerald-300 pb-1 border-b border-slate-800">
+                              <span>Venda a Retalho (Por {calc.retailDecomposition.retailUnit})</span>
+                              <span className="text-[9px] text-slate-400 font-mono">Margem: {calc.retailDecomposition.retailMargin.toFixed(1)}%</span>
+                            </div>
+                            <div className="flex justify-between text-slate-400 text-[10px]">
+                              <span>Custo Unitário (SEM IVA)</span>
+                              <strong className="font-mono text-slate-200">{formatMoney(calc.retailDecomposition.costPerRetailUnitNet)}</strong>
+                            </div>
+                            <div className="flex justify-between text-cyan-300 text-[11px]">
+                              <span>PVP Unitário (SEM IMPOSTOS)</span>
+                              <strong className="font-mono">{formatMoney(calc.retailDecomposition.retailPvpBase)}</strong>
+                            </div>
+                            <div className="flex justify-between text-emerald-400 text-xs font-bold pt-0.5">
+                              <span>PVP Unitário (COM IMPOSTOS)</span>
+                              <strong className="font-mono text-sm">{formatMoney(calc.retailDecomposition.retailPvpFinal)}</strong>
+                            </div>
+                            <div className="flex justify-between text-emerald-300 text-[11px] pt-1 border-t border-slate-800">
+                              <span>Lucro Líquido Unitário</span>
+                              <strong className="font-mono">{formatMoney(calc.retailDecomposition.retailNetProfit)}</strong>
+                            </div>
+                            <div className="pt-1.5 border-t border-emerald-500/30 text-[10px] space-y-0.5 bg-emerald-950/20 p-1.5 rounded">
+                              <div className="flex justify-between text-slate-300">
+                                <span>Total Stock ({calc.retailDecomposition.totalRetailUnits} {calc.retailDecomposition.retailUnit}) SEM IMPOSTOS:</span>
+                                <strong className="font-mono text-cyan-300">{formatMoney(calc.retailDecomposition.retailTotalSalesNet)}</strong>
+                              </div>
+                              <div className="flex justify-between text-emerald-300 font-bold">
+                                <span>Total Stock COM IMPOSTOS:</span>
+                                <strong className="font-mono">{formatMoney(calc.retailDecomposition.retailTotalSalesGross)}</strong>
+                              </div>
+                              <div className="flex justify-between text-emerald-400 font-bold pt-0.5">
+                                <span>Lucro Líquido Total no Retalho:</span>
+                                <strong className="font-mono">{formatMoney(calc.retailDecomposition.retailTotalNetProfit)}</strong>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-indigo-300 text-[11px]">
-                          <span>(+) IVA Unitário ({vatRate}%)</span>
-                          <strong className="font-mono">+{formatMoney(calc.retailDecomposition.vatPerRetailUnit)}</strong>
-                        </div>
-                        <div className="flex justify-between items-center text-emerald-400 text-xs font-bold pt-1 border-t border-slate-800">
-                          <span>(=) PVP Unitário a Retalho (COM IVA)</span>
-                          <strong className="font-mono text-sm">{formatMoney(calc.retailDecomposition.pvpFinalPerRetailUnit)}</strong>
-                        </div>
-                        <div className="flex justify-between text-emerald-300 text-[11px] pt-0.5">
-                          <span>Lucro Líquido Real Unitário</span>
-                          <strong className="font-mono">{formatMoney(calc.retailDecomposition.netProfitPerRetailUnit)}</strong>
+
+                        {/* Comparativo de Ganho Adicional */}
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-2 text-center text-xs font-mono text-emerald-300">
+                          Ganho Adicional na Venda a Retalho: <strong className="text-emerald-200">+{formatMoney(calc.retailDecomposition.extraRevenueAtRetail)}</strong> de Faturação e <strong className="text-emerald-200">+{formatMoney(calc.retailDecomposition.extraProfitAtRetail)}</strong> de Lucro Líquido Real!
                         </div>
                       </div>
                     )}
@@ -1880,7 +2096,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                       )}
                       {calc.extras?.hasExtras && calc.totalInputVatSupported > 0 && (
                         <div className="flex justify-between text-emerald-400/90 text-[11px]">
-                          <span>[i] Crédito IVA Suportado (Compras+Extras)</span>
+                          <span>[i] Crédito IVA Suportado (Compras + Extras)</span>
                           <span className="font-mono">({formatMoney(calc.totalInputVatSupported)})</span>
                         </div>
                       )}
@@ -1899,10 +2115,10 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                   <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] uppercase font-bold font-mono tracking-wider text-emerald-400 block">
-                        LUCRO LÍQUIDO REAL
+                        LUCRO LÍQUIDO REAL (COM IMPOSTOS DESCONTADOS)
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        Livre de mercadoria, taxas e impostos
+                        Livre de mercadoria, despesas de aquisição, taxas e impostos fiscais
                       </span>
                     </div>
                     <strong className="text-base font-bold font-mono text-emerald-400">

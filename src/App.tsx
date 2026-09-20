@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserSafe, SystemSettings } from './types';
 import { SupportedLang } from './i18n/translations';
 import { useI18n } from './i18n/I18nContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { Footer } from './components/Footer';
@@ -10,6 +11,9 @@ import { ImportSimulator } from './components/ImportSimulator';
 import { ExcelBatchSimulator } from './components/ExcelBatchSimulator';
 import { PlansModal } from './components/PlansModal';
 import { SupportChatWidget } from './components/SupportChatWidget';
+import { AuthModal } from './components/AuthModal';
+import { ClientProfileModal } from './components/ClientProfileModal';
+import { SignupBonusPresentationNotification } from './components/SignupBonusPresentationNotification';
 
 // Advanced Features & Modules
 import { BasicPhoneMobileMode } from './components/BasicPhoneMobileMode';
@@ -21,13 +25,15 @@ import { AdminAdvancedSettingsTab } from './components/admin/AdminAdvancedSettin
 import { LegalTermsModal } from './components/LegalTermsModal';
 import { CornerMenu } from './components/CornerMenu';
 
-export default function App() {
+function AppContent() {
   const { language, setLanguage } = useI18n();
   const [currentLang, setCurrentLang] = useState<SupportedLang>(language || 'pt');
   const [activeTab, setActiveTab] = useState<ActiveTab>('local');
   const [isSidebarHidden, setIsSidebarHidden] = useState<boolean>(() => {
     return localStorage.getItem('nanucloud_sidebar_hidden') === 'true';
   });
+
+  const { currentUser, isClient, isAdmin, consumeCredit } = useAuth();
 
   const toggleSidebar = () => {
     setIsSidebarHidden((prev) => {
@@ -42,20 +48,24 @@ export default function App() {
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [isTermsOpen, setIsTermsOpen] = useState<boolean>(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authInitialTab, setAuthInitialTab] = useState<'client' | 'admin'>('client');
+  const [isClientProfileOpen, setIsClientProfileOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
 
-  // Standard safe profile for components that display operator name
-  const systemOperator: UserSafe = {
-    id: 'operador_sistema',
-    name: 'Operador NANUCLOUD',
-    email: 'operador@nanucloud.com',
+  // Fallback guest profile if unauthenticated (Standard User / Visitor role - No free queries without registration)
+  const guestOperator: UserSafe = {
+    id: 'visitante_anonimo',
+    name: 'Visitante Comercial',
+    company: 'Empresa Visitante',
+    email: 'visitante@nanucloud.com',
     country: 'Angola',
-    role: 'super_admin',
+    role: 'client',
     isActive: true,
-    queriesRemaining: 999999,
+    queriesRemaining: 0,
     totalQueriesUsed: 0,
-    activePlanId: 'plan_unlimited',
-    activePlanName: 'Acesso Livre Irrestrito',
+    activePlanId: 'plan_starter',
+    activePlanName: 'Acesso Livre Simuladores',
     planExpiresAt: null,
     isImportUnlocked: true,
     isBatchUnlocked: true,
@@ -64,6 +74,8 @@ export default function App() {
     updatedAt: '2026-01-01T00:00:00Z',
     lastLoginAt: '2026-01-01T00:00:00Z'
   };
+
+  const effectiveUser: UserSafe = currentUser || guestOperator;
 
   const fetchSystemSettings = async () => {
     try {
@@ -103,14 +115,35 @@ export default function App() {
     localStorage.setItem('nanucloud_user_lang', lang);
   };
 
+  const handleOpenClientLogin = () => {
+    setAuthInitialTab('client');
+    setIsAuthModalOpen(true);
+  };
+
+  const handleOpenAdminLogin = () => {
+    setAuthInitialTab('admin');
+    setIsAuthModalOpen(true);
+  };
+
+  const handleSimulationDone = () => {
+    if (currentUser && isClient) {
+      consumeCredit(1);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0F172A] text-slate-200 antialiased selection:bg-indigo-500 selection:text-white font-sans">
-      {/* Top Fixed Header */}
+      {/* Top Fixed Header with Client/Admin Auth Buttons & Balance Badge */}
       <Navbar
         currentLang={currentLang}
         onLanguageChange={handleLangChange}
         onToggleMenu={() => setIsMenuDrawerOpen((prev) => !prev)}
         onNavigateHome={() => setActiveTab('local')}
+        onOpenClientLogin={handleOpenClientLogin}
+        onOpenAdminLogin={handleOpenAdminLogin}
+        onOpenClientProfile={() => setIsClientProfileOpen(true)}
+        onOpenAdminDashboard={() => setActiveTab('admin_settings')}
+        onOpenPlans={() => setIsPlansOpen(true)}
       />
 
       {/* Main Container */}
@@ -129,6 +162,9 @@ export default function App() {
             currentLang={currentLang}
             onOpenTerms={() => setIsTermsOpen(true)}
             onToggleSidebar={toggleSidebar}
+            onOpenClientLogin={handleOpenClientLogin}
+            onOpenAdminLogin={handleOpenAdminLogin}
+            onOpenClientProfile={() => setIsClientProfileOpen(true)}
           />
         )}
 
@@ -152,95 +188,102 @@ export default function App() {
               </button>
             </div>
           )}
+
+          {/* Marketing & Signup Bonus Presentation Notification Banner */}
+          <SignupBonusPresentationNotification
+            user={currentUser}
+            onOpenRegister={handleOpenClientLogin}
+            onOpenLogin={handleOpenClientLogin}
+          />
           
           {/* TAB: Vendas & Comércio (Local) */}
           {activeTab === 'local' && (
             <LocalTradeSimulator
-              user={systemOperator}
+              user={effectiveUser}
               currentLang={currentLang}
               onOpenPlans={() => setIsPlansOpen(true)}
-              onOpenAuth={() => {}}
-              onCalculationDone={() => {}}
+              onOpenAuth={handleOpenClientLogin}
+              onCalculationDone={handleSimulationDone}
             />
           )}
 
           {/* TAB: Prestação de Serviços & Consultoria */}
           {activeTab === 'services_consulting' && (
             <ServicesConsultingSimulator
-              user={systemOperator}
+              user={effectiveUser}
               currentLang={currentLang}
               onOpenPlans={() => setIsPlansOpen(true)}
-              onOpenAuth={() => {}}
-              onCalculationDone={() => {}}
+              onOpenAuth={handleOpenClientLogin}
+              onCalculationDone={handleSimulationDone}
             />
           )}
 
           {/* TAB: Intermediários & Corretagem */}
           {activeTab === 'intermediary' && (
             <IntermediaryBrokerSimulator
-              user={systemOperator}
+              user={effectiveUser}
               currentLang={currentLang}
               onOpenPlans={() => setIsPlansOpen(true)}
-              onOpenAuth={() => {}}
-              onCalculationDone={() => {}}
+              onOpenAuth={handleOpenClientLogin}
+              onCalculationDone={handleSimulationDone}
             />
           )}
 
           {/* TAB: Modo Celular Básico / POS */}
           {activeTab === 'basic_mobile' && (
             <BasicPhoneMobileMode
-              user={systemOperator}
-              onCalculationDone={() => {}}
+              user={effectiveUser}
+              onCalculationDone={handleSimulationDone}
             />
           )}
 
           {/* TAB: Importação Aduaneira */}
           {activeTab === 'import' && (
             <ImportSimulator
-              user={systemOperator}
+              user={effectiveUser}
               currentLang={currentLang}
               onOpenPlans={() => setIsPlansOpen(true)}
-              onOpenAuth={() => {}}
-              onCalculationDone={() => {}}
+              onOpenAuth={handleOpenClientLogin}
+              onCalculationDone={handleSimulationDone}
             />
           )}
 
           {/* TAB: Lotes Excel (.xlsx) */}
           {activeTab === 'excel' && (
             <ExcelBatchSimulator
-              user={systemOperator}
+              user={effectiveUser}
               currentLang={currentLang}
               onOpenPlans={() => setIsPlansOpen(true)}
-              onOpenAuth={() => {}}
-              onCalculationDone={() => {}}
+              onOpenAuth={handleOpenClientLogin}
+              onCalculationDone={handleSimulationDone}
             />
           )}
 
           {/* TAB: API REST ERP & Lojas */}
           {activeTab === 'api_integration' && (
             <ApiIntegrationsTab
-              user={systemOperator}
+              user={effectiveUser}
               onOpenPlans={() => setIsPlansOpen(true)}
-              onOpenAuth={() => {}}
+              onOpenAuth={handleOpenClientLogin}
             />
           )}
 
           {/* TAB: Matriz Fiscal de Taxas */}
           {activeTab === 'fiscal_matrix' && (
             <AdminAdvancedSettingsTab
-              currentUser={systemOperator}
+              currentUser={effectiveUser}
               initialSection="fiscal_matrix"
             />
           )}
 
           {/* TAB: Central de Tickets & Contactos */}
           {activeTab === 'tickets' && (
-            <TicketsManagementTab currentUser={systemOperator} />
+            <TicketsManagementTab currentUser={effectiveUser} />
           )}
 
-          {/* TAB: Definições Avançadas */}
+          {/* TAB: Definições & Gestão Administrativa */}
           {activeTab === 'admin_settings' && (
-            <AdminAdvancedSettingsTab currentUser={systemOperator} />
+            <AdminAdvancedSettingsTab currentUser={effectiveUser} />
           )}
 
         </div>
@@ -249,13 +292,33 @@ export default function App() {
       {/* Global Footer */}
       <Footer settings={systemSettings} />
 
+      {/* Auth Modal (Client Login/Register & Admin Login) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authInitialTab}
+        onLoginSuccess={(role) => {
+          if (role === 'admin') {
+            setActiveTab('admin_settings');
+          }
+        }}
+      />
+
+      {/* Client Profile Modal (Profile, Purchased Balance, Payment Orders) */}
+      <ClientProfileModal
+        isOpen={isClientProfileOpen}
+        onClose={() => setIsClientProfileOpen(false)}
+        onOpenPlans={() => setIsPlansOpen(true)}
+        onOpenSupportChat={() => setIsChatOpen(true)}
+      />
+
       {/* Plans Modal */}
       <PlansModal
-        user={systemOperator}
+        user={effectiveUser}
         isOpen={isPlansOpen}
         onClose={() => setIsPlansOpen(false)}
-        onOpenAuth={() => {}}
-        onOpenChat={() => {
+        onOpenAuth={handleOpenClientLogin}
+        onOpenSupportChat={() => {
           setIsPlansOpen(false);
           setIsChatOpen(true);
         }}
@@ -266,12 +329,12 @@ export default function App() {
       <LegalTermsModal
         isOpen={isTermsOpen}
         onClose={() => setIsTermsOpen(false)}
-        currentUser={systemOperator}
+        currentUser={effectiveUser}
       />
 
       {/* Floating 24/7 Live Support Chat & Bot */}
       <SupportChatWidget
-        user={systemOperator}
+        user={effectiveUser}
         isOpen={isChatOpen}
         onToggle={() => setIsChatOpen(!isChatOpen)}
       />
@@ -288,7 +351,7 @@ export default function App() {
         }}
         isSidebarHidden={isSidebarHidden}
         onToggleSidebar={toggleSidebar}
-        user={systemOperator}
+        user={effectiveUser}
         currentLang={currentLang}
         onLanguageChange={handleLangChange}
         onOpenPlans={() => setIsPlansOpen(true)}
@@ -296,7 +359,18 @@ export default function App() {
         isOpen={isMenuDrawerOpen}
         onClose={() => setIsMenuDrawerOpen(false)}
         onToggle={() => setIsMenuDrawerOpen((prev) => !prev)}
+        onOpenClientLogin={handleOpenClientLogin}
+        onOpenAdminLogin={handleOpenAdminLogin}
+        onOpenClientProfile={() => setIsClientProfileOpen(true)}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

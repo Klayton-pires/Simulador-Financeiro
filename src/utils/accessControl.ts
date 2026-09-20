@@ -56,14 +56,14 @@ export function getRoleDisplayLabel(role?: string | null): string {
     case 'client':
     case 'user':
     default:
-      return 'Cliente';
+      return 'Utilizador';
   }
 }
 
 /**
  * Validates whether a user can perform a simulation in any module:
  * - Unauthenticated (Guest): uses free demonstration credits without login!
- * - Client: MUST have queriesRemaining > 0
+ * - Utilizador: MUST have queriesRemaining > 0
  * - Staff / Admin / Super Admin: permitted to test & simulate freely
  */
 export function canUserSimulate(user: UserSafe | null): {

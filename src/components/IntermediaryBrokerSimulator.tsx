@@ -26,9 +26,10 @@ import autoTable from 'jspdf-autotable';
 import { canUserSimulate } from '../utils/accessControl';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { ConfirmSimulationModal, SimulationSummaryItem } from './ConfirmSimulationModal';
-import { saveSimulationToFirestore } from '../services/firebase';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
+import { NumericInput } from './common/NumericInput';
+import { parseFormattedNumber } from '../utils/numberFormat';
 
 interface IntermediaryBrokerSimulatorProps {
   user: UserSafe | null;
@@ -54,8 +55,8 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
   
   // Deal values
   const [dealTitle, setDealTitle] = useState<string>('');
-  const [productsTotal, setProductsTotal] = useState<string>('50000000');
-  const [servicesTotal, setServicesTotal] = useState<string>('15000000');
+  const [productsTotal, setProductsTotal] = useState<string>('');
+  const [servicesTotal, setServicesTotal] = useState<string>('');
   
   // Intermediary details
   const [intermediaryName, setIntermediaryName] = useState<string>('');
@@ -65,7 +66,7 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
 
   // Commission Scope & Mode
   const [commissionScope, setCommissionScope] = useState<'products_only' | 'services_only' | 'total_deal' | 'fixed_amount'>('total_deal');
-  const [commissionPct, setCommissionPct] = useState<string>('7.5');
+  const [commissionPct, setCommissionPct] = useState<string>('');
   const [fixedCommissionAmount, setFixedCommissionAmount] = useState<string>('');
   
   // Fiscal parameters
@@ -152,14 +153,14 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
   }, [countryCode, intermediaryType, commissionScope, productsTotal, servicesTotal, commissionPct, fixedCommissionAmount, includeVatOnCommission, commissionVatRate, retentionRate, tpaRate, tpaMode]);
 
   const calculateIntermediation = () => {
-    const prodVal = parseFloat(productsTotal) || 0;
-    const servVal = parseFloat(servicesTotal) || 0;
+    const prodVal = parseFormattedNumber(productsTotal);
+    const servVal = parseFormattedNumber(servicesTotal);
     const totalDealVal = prodVal + servVal;
-    const commPct = parseFloat(commissionPct) || 0;
-    const fixCommVal = parseFloat(fixedCommissionAmount) || 0;
-    const retPct = parseFloat(retentionRate) || 0;
+    const commPct = parseFormattedNumber(commissionPct);
+    const fixCommVal = parseFormattedNumber(fixedCommissionAmount);
+    const retPct = parseFormattedNumber(retentionRate);
     const vatRate = includeVatOnCommission ? commissionVatRate : 0;
-    const tpaVal = parseFloat(tpaRate) || 0;
+    const tpaVal = parseFormattedNumber(tpaRate);
 
     // 1. Determine the commission calculation base
     let commissionBaseTarget = 0;
@@ -252,11 +253,11 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
     setSuccessMessage(null);
 
     const errors: Record<string, string> = {};
-    const prodVal = parseFloat(productsTotal) || 0;
-    const servVal = parseFloat(servicesTotal) || 0;
+    const prodVal = parseFormattedNumber(productsTotal);
+    const servVal = parseFormattedNumber(servicesTotal);
     const totalDeal = prodVal + servVal;
-    const commPct = parseFloat(commissionPct) || 0;
-    const fixVal = parseFloat(fixedCommissionAmount) || 0;
+    const commPct = parseFormattedNumber(commissionPct);
+    const fixVal = parseFormattedNumber(fixedCommissionAmount);
 
     if (totalDeal <= 0) {
       errors.deal = 'Indique o valor de Produtos e/ou Serviços do negócio a intermediar.';
@@ -314,28 +315,15 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
           setTimeout(() => setShowExhaustedModal(true), 1200);
         }
       }
-
-      // Save to Cloud Firestore
-      if (user) {
-        saveSimulationToFirestore(user.id, 'broker_intermediary', {
-          country: countryCode,
-          dealTitle: calc.dealTitle,
-          totalDealVal: calc.totalDealVal,
-          grossCommission: calc.grossCommission,
-          netPayableToIntermediary: calc.netPayableToIntermediary,
-          taxToDeliverToState: calc.taxToDeliverToState,
-          retentionRate: calc.retentionRate
-        }).catch(() => {});
-      }
     } finally {
       setIsCalculating(false);
     }
   };
 
-  const prodVal = parseFloat(productsTotal) || 0;
-  const servVal = parseFloat(servicesTotal) || 0;
+  const prodVal = parseFormattedNumber(productsTotal);
+  const servVal = parseFormattedNumber(servicesTotal);
   const totalDealVal = prodVal + servVal;
-  const commPct = parseFloat(commissionPct) || 0;
+  const commPct = parseFormattedNumber(commissionPct);
 
   const simulationSummaryItems: SimulationSummaryItem[] = [
     {
@@ -347,7 +335,7 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
     {
       label: 'Comissão Negociada',
       value: commissionScope === 'fixed_amount' 
-        ? formatMoney(parseFloat(fixedCommissionAmount) || 0)
+        ? formatMoney(parseFormattedNumber(fixedCommissionAmount))
         : `${commPct}% (${commissionScope === 'products_only' ? 'Produtos' : commissionScope === 'services_only' ? 'Serviços' : 'Negócio Global'})`
     },
     {
@@ -654,15 +642,14 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
                 <span>Valor de Produtos (Bens)</span>
                 <span className="text-[10px] text-slate-500">Mercadoria</span>
               </label>
-              <input
-                type="number"
+              <NumericInput
                 value={productsTotal}
-                onChange={(e) => {
-                  setProductsTotal(e.target.value);
+                onChange={(val) => {
+                  setProductsTotal(val);
                   clearFieldError('deal');
                   clearFieldError('productsTotal');
                 }}
-                placeholder="Ex: 50000000"
+                placeholder="0,000"
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-xs font-mono focus:border-indigo-500 outline-none transition font-bold"
               />
             </div>
@@ -673,15 +660,14 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
                 <span>Valor de Serviços</span>
                 <span className="text-[10px] text-slate-500">Mão de Obra</span>
               </label>
-              <input
-                type="number"
+              <NumericInput
                 value={servicesTotal}
-                onChange={(e) => {
-                  setServicesTotal(e.target.value);
+                onChange={(val) => {
+                  setServicesTotal(val);
                   clearFieldError('deal');
                   clearFieldError('servicesTotal');
                 }}
-                placeholder="Ex: 15000000"
+                placeholder="0,000"
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-xs font-mono focus:border-indigo-500 outline-none transition font-bold"
               />
             </div>
@@ -693,7 +679,7 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
               Valor Total do Negócio a Intermediar (Produtos + Serviços):
             </span>
             <strong className="text-emerald-400 text-sm">
-              {formatMoney((parseFloat(productsTotal) || 0) + (parseFloat(servicesTotal) || 0))}
+              {formatMoney(parseFormattedNumber(productsTotal) + parseFormattedNumber(servicesTotal))}
             </strong>
           </div>
           {fieldErrors.deal && (
@@ -787,14 +773,13 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
                 <label className="text-[11px] font-bold text-slate-400 font-mono uppercase tracking-wider">
                   Valor Fixo da Comissão / Corretagem ({country.curr}) *
                 </label>
-                <input
-                  type="number"
+                <NumericInput
                   value={fixedCommissionAmount}
-                  onChange={(e) => {
-                    setFixedCommissionAmount(e.target.value);
+                  onChange={(val) => {
+                    setFixedCommissionAmount(val);
                     clearFieldError('fixedCommissionAmount');
                   }}
-                  placeholder={`Ex: 2500000 (${country.curr})`}
+                  placeholder="0,000"
                   className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-xs font-mono focus:border-indigo-500 outline-none transition font-bold"
                 />
               </div>
@@ -807,15 +792,13 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
                   </span>
                 </label>
                 <div className="relative">
-                  <input
-                    type="number"
+                  <NumericInput
                     value={commissionPct}
-                    onChange={(e) => {
-                      setCommissionPct(e.target.value);
+                    onChange={(val) => {
+                      setCommissionPct(val);
                       clearFieldError('commissionPct');
                     }}
-                    step="0.1"
-                    placeholder="Ex: 7.5"
+                    placeholder="0,000"
                     className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-xs font-mono focus:border-indigo-500 outline-none transition font-bold"
                   />
                   <span className="absolute right-3 top-2 text-xs text-slate-500 font-mono">%</span>
@@ -904,12 +887,10 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
                 <span className="text-[10px] text-amber-400 font-mono">Recomendado: 6.5%</span>
               </label>
               <div className="relative">
-                <input
-                  type="number"
+                <NumericInput
                   value={retentionRate}
-                  onChange={(e) => setRetentionRate(e.target.value)}
-                  step="0.1"
-                  min="0"
+                  onChange={setRetentionRate}
+                  placeholder="0,000"
                   className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-xs font-mono focus:border-indigo-500 outline-none transition font-bold"
                 />
                 <span className="absolute right-3 top-2 text-xs text-slate-500 font-mono">%</span>
@@ -966,13 +947,10 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
               </div>
 
               <div className="relative">
-                <input
-                  type="number"
+                <NumericInput
                   value={tpaRate}
-                  onChange={(e) => setTpaRate(e.target.value)}
-                  step={tpaMode === 'pct' ? '0.1' : '100'}
-                  min="0"
-                  placeholder="0 (Isento)"
+                  onChange={setTpaRate}
+                  placeholder="0,000"
                   className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-xs font-mono focus:border-indigo-500 outline-none transition"
                 />
                 <span className="absolute right-3 top-2 text-xs text-slate-500 font-mono">

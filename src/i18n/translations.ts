@@ -157,7 +157,7 @@ export const TRANSLATIONS: Record<SupportedLang, TranslationDict> = {
     mApi: "⚡ API REST & ERPs",
     mFiscalMatrix: "🏛️ Matriz Fiscal de Taxas",
     mFiscalAi: "🤖 IA Fiscal & Notícias",
-    mClients: "👥 Gestão de Clientes",
+    mClients: "👥 Gestão de Utilizadores",
     mUsers: "🛡️ Utilizadores & Staff (RBAC)",
     mTickets: "🎫 Tickets & Suporte",
     mMarketing: "📢 Marketing & Notificações",

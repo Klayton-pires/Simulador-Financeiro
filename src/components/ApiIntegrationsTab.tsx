@@ -382,7 +382,7 @@ export const ApiIntegrationsTab: React.FC<ApiIntegrationsTabProps> = ({
           {/* Right Column: Chave de API & Campos Recomendados Ativados */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Chave de API da Conta do Cliente */}
+            {/* Chave de API da Conta do Utilizador */}
             <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-slate-300 font-mono uppercase tracking-wider flex items-center gap-2">
@@ -517,7 +517,7 @@ export const ApiIntegrationsTab: React.FC<ApiIntegrationsTabProps> = ({
               2. FLUXO DE REQUISIÇÃO & RESPOSTA
             </h3>
             <ol className="list-decimal pl-5 space-y-1.5 text-slate-300 marker:text-indigo-400">
-              <li>O ERP do cliente faz uma requisição HTTP POST para <code>https://api.nanucloud.com/v1/calculate/product</code>.</li>
+              <li>O ERP do utilizador faz uma requisição HTTP POST para <code>https://api.nanucloud.com/v1/calculate/product</code>.</li>
               <li>Envia no cabeçalho <code>Authorization: Bearer &lt;SUA_CHAVE_API&gt;</code> e no corpo (JSON) o custo, margem e país.</li>
               <li>O motor NANUCLOUD valida a chave, aplica as regras fiscais vigentes do país selecionado e retorna o JSON estruturado em menos de 50ms.</li>
               <li>O ERP grava o preço final diretamente na ficha do artigo ou emite o orçamento automaticamente.</li>

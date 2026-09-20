@@ -317,7 +317,7 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
       ],
       calculatedFields: [
         { label: 'Volume Total Custo Base', amount: totalCostCalculated, rateOrMargin: 'Custo', fiscalDestiny: 'Fornecedores' },
-        { label: 'Facturação Total Prevista (PVP com IVA)', amount: totalPvpFinalCalculated, rateOrMargin: `${vatRate}% IVA`, isFinalHighlight: true, fiscalDestiny: 'Clientes / Venda' },
+        { label: 'Facturação Total Prevista (PVP com IVA)', amount: totalPvpFinalCalculated, rateOrMargin: `${vatRate}% IVA`, isFinalHighlight: true, fiscalDestiny: 'Utilizadores / Venda' },
         { label: 'Lucro Líquido Real Consolidado', amount: totalNetProfitCalculated, rateOrMargin: `${marginPct}%`, isFinalHighlight: true, fiscalDestiny: 'Empresa / Caixa' }
       ],
       summaryCards: [

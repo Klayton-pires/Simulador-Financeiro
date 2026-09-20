@@ -28,7 +28,9 @@ import {
   Check,
   ChevronRight,
   Globe,
-  Sliders
+  Sliders,
+  User,
+  Shield
 } from 'lucide-react';
 import { ActiveTab } from './Sidebar';
 import { UserSafe } from '../types';
@@ -48,6 +50,9 @@ interface CornerMenuProps {
   isOpen?: boolean;
   onClose?: () => void;
   onToggle?: () => void;
+  onOpenClientLogin?: () => void;
+  onOpenAdminLogin?: () => void;
+  onOpenClientProfile?: () => void;
 }
 
 interface CornerMenuItem {
@@ -71,7 +76,10 @@ export const CornerMenu: React.FC<CornerMenuProps> = ({
   onOpenSupport,
   isOpen: controlledIsOpen,
   onClose: controlledOnClose,
-  onToggle: controlledOnToggle
+  onToggle: controlledOnToggle,
+  onOpenClientLogin,
+  onOpenAdminLogin,
+  onOpenClientProfile
 }) => {
   const [internalIsOpen, setInternalIsOpen] = useState<boolean>(false);
 
@@ -229,6 +237,55 @@ export const CornerMenu: React.FC<CornerMenuProps> = ({
               >
                 <LifeBuoy className="w-3 h-3" />
                 <span className="text-[11px]">Suporte</span>
+              </button>
+            </div>
+
+            {/* Portais de Acesso Reservado: Utilizador & Gestores */}
+            <div className="p-3 bg-slate-900/60 border-b border-slate-800 grid grid-cols-2 gap-2 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => {
+                  if (user?.role === 'client' && onOpenClientProfile) {
+                    onOpenClientProfile();
+                  } else if (onOpenClientLogin) {
+                    onOpenClientLogin();
+                  }
+                  closeMenu();
+                }}
+                className="p-2 rounded-xl bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/40 text-left transition group cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5 text-indigo-400 font-bold text-[11px] mb-1">
+                  <User className="w-3.5 h-3.5" />
+                  <span>Área do Utilizador</span>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  {user?.role === 'client' ? (
+                    <span className="text-amber-300 font-bold">{user.queriesRemaining} créditos</span>
+                  ) : (
+                    'Login & Perfil'
+                  )}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (isStaff && onTabChange) {
+                    onTabChange('admin_settings');
+                  } else if (onOpenAdminLogin) {
+                    onOpenAdminLogin();
+                  }
+                  closeMenu();
+                }}
+                className="p-2 rounded-xl bg-slate-950/60 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-500/40 text-left transition group cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-[11px] mb-1">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Área Gestores</span>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  {isStaff ? 'Painel de Gestão' : 'Acesso Admin'}
+                </div>
               </button>
             </div>
 

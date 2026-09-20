@@ -195,6 +195,7 @@ export const ClientsManagementSection: React.FC<ClientsManagementSectionProps> =
   const persistClients = (updated: ClientRecord[]) => {
     setClients(updated);
     localStorage.setItem('nanucloud_clients_db', JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('nanucloud_clients_updated'));
   };
 
   const handleOpenCreate = () => {

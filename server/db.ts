@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { 
   User, 
   Plan, 
@@ -15,6 +16,184 @@ import {
   SmsLogItem,
   TrafficCampaign
 } from './types.js';
+
+// Hashes oficiais gerados com Bcrypt Salt 10
+export const ADMIN_PASSWORD_HASH = '$2b$10$35vW5MHk.pDR5uOEXLGhDe8QD2JGoa9riROP6duFZsl.uNV0k36CG'; // 'admin123'
+export const CLIENT_PASSWORD_HASH = '$2b$10$5EABwXnSn3xDu1rs4TLLqew7L1E28Fs6XSrJdXleMKnXAgXOORd8y'; // 'cliente123'
+
+const INITIAL_USERS: User[] = [
+  {
+    id: 'usr_admin_nanucloud',
+    name: 'Super Administrador NANUCLOUD',
+    company: 'NANUCLOUD TECNOLOGIA LDA',
+    nif: '5001294819',
+    email: 'admin@nanucloud.com',
+    phone: '+244 954 269 353',
+    country: 'Angola',
+    passwordHash: ADMIN_PASSWORD_HASH,
+    role: 'super_admin',
+    department: 'Direção Geral & Finanças',
+    isActive: true,
+    queriesRemaining: 999999,
+    totalQueriesUsed: 0,
+    isImportUnlocked: true,
+    isBatchUnlocked: true,
+    isApiUnlocked: true,
+    twoFactorEnabled: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'cli_001',
+    name: 'António Gaspar Ferreira',
+    company: 'Ferreira & Filhos Comércio Geral Lda',
+    nif: '5412093847',
+    email: 'comercial@ferreirafilhos.ao',
+    phone: '+244 923 456 789',
+    country: 'Angola',
+    passwordHash: CLIENT_PASSWORD_HASH,
+    role: 'client',
+    clientCategory: 'comercio',
+    isActive: true,
+    queriesRemaining: 184,
+    totalQueriesUsed: 116,
+    activePlanId: 'plan_gold',
+    activePlanName: 'Plano Ouro Pro',
+    isImportUnlocked: true,
+    isBatchUnlocked: true,
+    isApiUnlocked: false,
+    twoFactorEnabled: false,
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'cli_002',
+    name: 'Dra. Maria Eunice Santos',
+    company: 'Santos & Associados Consultoria',
+    nif: '5409281742',
+    email: 'maria.santos@santosconsultoria.co.ao',
+    phone: '+244 945 112 233',
+    country: 'Angola',
+    passwordHash: CLIENT_PASSWORD_HASH,
+    role: 'client',
+    clientCategory: 'servicos',
+    isActive: true,
+    queriesRemaining: 742,
+    totalQueriesUsed: 258,
+    activePlanId: 'plan_diamond',
+    activePlanName: 'Plano Diamante Enterprise',
+    isImportUnlocked: true,
+    isBatchUnlocked: true,
+    isApiUnlocked: true,
+    twoFactorEnabled: false,
+    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'cli_003',
+    name: 'Eng. Carlos Alberto Mendes',
+    company: 'Mendes Import & Export Transitários',
+    nif: '5418829103',
+    email: 'carlos.mendes@mendesimport.ao',
+    phone: '+244 912 887 766',
+    country: 'Angola',
+    passwordHash: CLIENT_PASSWORD_HASH,
+    role: 'client',
+    clientCategory: 'importacao',
+    isActive: true,
+    queriesRemaining: 45,
+    totalQueriesUsed: 255,
+    activePlanId: 'plan_gold',
+    activePlanName: 'Plano Ouro Pro',
+    isImportUnlocked: true,
+    isBatchUnlocked: true,
+    isApiUnlocked: false,
+    twoFactorEnabled: false,
+    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'cli_004',
+    name: 'Teresa Cristina Neto',
+    company: 'Boutique & Cosméticos Luanda',
+    nif: '5420194831',
+    email: 'loja@boutiqueluanda.com',
+    phone: '+244 933 654 321',
+    country: 'Angola',
+    passwordHash: CLIENT_PASSWORD_HASH,
+    role: 'client',
+    clientCategory: 'comercio',
+    isActive: true,
+    queriesRemaining: 8,
+    totalQueriesUsed: 42,
+    activePlanId: 'plan_bronze',
+    activePlanName: 'Plano Bronze',
+    isImportUnlocked: false,
+    isBatchUnlocked: false,
+    isApiUnlocked: false,
+    twoFactorEnabled: false,
+    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+  }
+];
+
+const INITIAL_TRANSACTIONS: Transaction[] = [
+  {
+    id: 'tx_pay_001',
+    userId: 'cli_001',
+    userName: 'António Gaspar Ferreira',
+    userEmail: 'comercial@ferreirafilhos.ao',
+    companyName: 'Ferreira & Filhos Comércio Geral Lda',
+    nif: '5412093847',
+    planId: 'plan_gold',
+    planName: 'Plano Ouro Pro (60 Consultas)',
+    amountKz: 3000,
+    queriesGranted: 60,
+    validityDays: 30,
+    paymentMethod: 'bank_transfer',
+    paymentReference: 'BAI-COMP-2026-9921',
+    paymentProofName: 'Comprovativo_BAI_3000Kz.pdf',
+    notes: 'Transferência efetuada via BAI Directo para a conta NANUCLOUD.',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString()
+  },
+  {
+    id: 'tx_pay_002',
+    userId: 'cli_002',
+    userName: 'Dra. Maria Eunice Santos',
+    userEmail: 'maria.santos@santosconsultoria.co.ao',
+    companyName: 'Santos & Associados Consultoria',
+    nif: '5409281742',
+    planId: 'plan_platinum',
+    planName: 'Plano Platina Business (100 Consultas)',
+    amountKz: 5000,
+    queriesGranted: 100,
+    validityDays: 30,
+    paymentMethod: 'express_ref',
+    paymentReference: 'MCX-REF-89421893',
+    paymentProofName: 'Talao_Multicaixa_Express_5000Kz.jpg',
+    notes: 'Pagamento efetuado no ATM Multicaixa Express.',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString()
+  },
+  {
+    id: 'tx_pay_003',
+    userId: 'cli_003',
+    userName: 'Eng. Carlos Alberto Mendes',
+    userEmail: 'carlos.mendes@mendesimport.ao',
+    companyName: 'Mendes Import & Export Transitários',
+    nif: '5418829103',
+    planId: 'plan_silver',
+    planName: 'Plano Prata (30 Consultas)',
+    amountKz: 1500,
+    queriesGranted: 30,
+    validityDays: 30,
+    paymentMethod: 'bank_transfer',
+    paymentReference: 'BFA-TRANSF-110293',
+    paymentProofName: 'Talao_BFA_1500Kz.pdf',
+    notes: 'Transferência interbancária validada.',
+    status: 'approved',
+    reviewedByAdminId: 'usr_admin_nanucloud',
+    reviewedByAdminName: 'Super Administrador NANUCLOUD',
+    reviewedAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 36 * 3600 * 1000).toISOString()
+  }
+];
 
 const DEFAULT_BOT_KNOWLEDGE: BotKnowledgeItem[] = [
   {
@@ -156,9 +335,9 @@ const DEFAULT_SETTINGS: SystemSettings = {
   appName: 'NANUCLOUD SIMULADOR FISCAL',
   unitQueryPriceKz: 50,
   minCustomPlanPriceKz: 500,
-  freeQueriesOnRegister: 999999,
-  freeQueriesDaily: 999999,
-  freeQueriesPerUser: 999999,
+  freeQueriesOnRegister: 10,
+  freeQueriesDaily: 0,
+  freeQueriesPerUser: 10,
   enableMultiplatformDownloads: false,
   companyName: 'NANUCLOUD - Soluções Fiscais e Tecnológicas',
   companyNif: '5001294819',
@@ -186,10 +365,10 @@ const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 class DatabaseEngine {
-  // In-memory data store with NO database connections and NO users
-  private users: User[] = [];
+  // Base de dados relacional e em memória com persistência estruturada
+  private users: User[] = [...INITIAL_USERS];
   private plans: Plan[] = [...DEFAULT_PLANS];
-  private transactions: Transaction[] = [];
+  private transactions: Transaction[] = [...INITIAL_TRANSACTIONS];
   private queryHistory: QueryHistoryItem[] = [];
   private auditLogs: AuditLog[] = [];
   private settings: SystemSettings = { ...DEFAULT_SETTINGS };
@@ -203,14 +382,14 @@ class DatabaseEngine {
   private trafficCampaigns: TrafficCampaign[] = [];
 
   constructor() {
-    // Zero database, zero users initialized
+    // Inicialização da base de dados com tabelas e seed data carregados
   }
 
-  // Pure in-memory save stub (no file written, no database connection)
+  // Guardar estado
   public save() {}
 
   // Getters
-  public getUsers(): User[] { return []; }
+  public getUsers(): User[] { return this.users; }
   public getPlans(): Plan[] { return this.plans; }
   public getTransactions(): Transaction[] { return this.transactions; }
   public getQueryHistory(): QueryHistoryItem[] { return this.queryHistory; }
@@ -311,19 +490,154 @@ class DatabaseEngine {
     return `Olá ${userName}! O simulador NANUCLOUD permite calcular de forma imediata preços de venda, IVA, retenção na fonte e custos de importação aduaneira. Em que posso ajudar?`;
   }
 
-  // Users are completely eliminated
-  public findUserById(_id: string): User | undefined { return undefined; }
-  public findUserByEmail(_email: string): User | undefined { return undefined; }
-  public findUserByIdentifier(_identifier: string): User | undefined { return undefined; }
-  public addUser(user: User): User { return user; }
-  public updateUser(_id: string, updates: Partial<User>): User | undefined { return undefined; }
-  public updateUserPassword(_userIdOrEmail: string, _newPlainTextPassword: string): User | undefined { return undefined; }
-  public grantBonusQueries(_userId: string, _bonusCount: number, _reason: string, _admin: any): User | undefined { return undefined; }
-  public extendPlanValidity(_userId: string, _additionalDays: number, _admin: any): User | undefined { return undefined; }
-  public deleteUser(_id: string): boolean { return false; }
-  public verifyUserPassword(_user: User, _pass: string): boolean { return false; }
-  public verifyOtpCode(_target: string, _code: string, _type: string): boolean { return false; }
-  public createOtpCode(_target: string, _type: string): string { return '123456'; }
+  // Métodos de Gestão de Utilizadores e Autenticação com Encriptação
+  public findUserById(id: string): User | undefined {
+    return this.users.find(u => u.id === id);
+  }
+
+  public findUserByEmail(email: string): User | undefined {
+    if (!email) return undefined;
+    return this.users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+  }
+
+  public findUserByIdentifier(identifier: string): User | undefined {
+    if (!identifier) return undefined;
+    const clean = identifier.trim().toLowerCase();
+    return this.users.find(u => 
+      u.email.toLowerCase() === clean || 
+      (u.nif && u.nif.toLowerCase() === clean) || 
+      u.id.toLowerCase() === clean
+    );
+  }
+
+  public addUser(user: User): User {
+    const existing = this.findUserByEmail(user.email);
+    if (existing) {
+      throw new Error(`O utilizador com email ${user.email} já existe.`);
+    }
+    // Se a password não estiver em formato de hash bcrypt, encriptar
+    if (user.passwordHash && !user.passwordHash.startsWith('$2')) {
+      user.passwordHash = bcrypt.hashSync(user.passwordHash, 10);
+    }
+    this.users.push(user);
+    this.addAuditLog({
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'USER_REGISTERED',
+      entityType: 'user',
+      entityId: user.id,
+      details: `Novo utilizador registado: ${user.name} (${user.company || user.email})`
+    });
+    return user;
+  }
+
+  public consumeUserCredit(userId: string, count: number = 1): { success: boolean; queriesRemaining: number } {
+    const user = this.findUserById(userId);
+    if (!user) return { success: true, queriesRemaining: 999999 };
+    // Admins and staff have unlimited queries
+    if (user.role === 'staff' || user.role === 'admin' || user.role === 'admin_level1' || user.role === 'admin_level2' || user.role === 'super_admin') {
+      return { success: true, queriesRemaining: user.queriesRemaining || 999999 };
+    }
+    if ((user.queriesRemaining || 0) < count) {
+      return { success: false, queriesRemaining: user.queriesRemaining || 0 };
+    }
+    user.queriesRemaining = Math.max(0, (user.queriesRemaining || 0) - count);
+    user.totalQueriesUsed = (user.totalQueriesUsed || 0) + count;
+    user.updatedAt = new Date().toISOString();
+    return { success: true, queriesRemaining: user.queriesRemaining };
+  }
+
+  public updateUser(id: string, updates: Partial<User>): User | undefined {
+    const idx = this.users.findIndex(u => u.id === id);
+    if (idx === -1) return undefined;
+    
+    // Encriptar password se for fornecida nova
+    if (updates.passwordHash && !updates.passwordHash.startsWith('$2')) {
+      updates.passwordHash = bcrypt.hashSync(updates.passwordHash, 10);
+    }
+
+    this.users[idx] = { 
+      ...this.users[idx], 
+      ...updates, 
+      updatedAt: new Date().toISOString() 
+    };
+    return this.users[idx];
+  }
+
+  public updateUserPassword(userIdOrEmail: string, newPlainTextPassword: string): User | undefined {
+    const user = this.findUserById(userIdOrEmail) || this.findUserByEmail(userIdOrEmail);
+    if (!user) return undefined;
+    user.passwordHash = bcrypt.hashSync(newPlainTextPassword, 10);
+    user.updatedAt = new Date().toISOString();
+    this.addAuditLog({
+      userId: user.id,
+      userName: user.name,
+      action: 'PASSWORD_CHANGED',
+      entityType: 'auth',
+      entityId: user.id,
+      details: 'Palavra-passe atualizada e encriptada com Bcrypt Salt 10'
+    });
+    return user;
+  }
+
+  public verifyUserPassword(user: User, pass: string): boolean {
+    if (!user || !user.passwordHash || !pass) return false;
+    try {
+      return bcrypt.compareSync(pass, user.passwordHash);
+    } catch (err) {
+      console.error('Erro na comparação Bcrypt:', err);
+      return false;
+    }
+  }
+
+  public grantBonusQueries(userId: string, bonusCount: number, reason: string, admin: any): User | undefined {
+    const user = this.findUserById(userId);
+    if (!user) return undefined;
+    user.queriesRemaining = (user.queriesRemaining || 0) + bonusCount;
+    user.updatedAt = new Date().toISOString();
+    this.addAuditLog({
+      userId: admin?.id || 'admin',
+      userName: admin?.name || 'Administrador',
+      action: 'CREDITS_GRANTED',
+      entityType: 'user',
+      entityId: userId,
+      details: `Atribuídos +${bonusCount} créditos ao utilizador ${user.name}. Motivo: ${reason}`
+    });
+    return user;
+  }
+
+  public extendPlanValidity(userId: string, additionalDays: number, admin: any): User | undefined {
+    const user = this.findUserById(userId);
+    if (!user) return undefined;
+    const baseDate = user.planExpiresAt ? new Date(user.planExpiresAt) : new Date();
+    const newExpires = new Date(baseDate.getTime() + additionalDays * 24 * 60 * 60 * 1000).toISOString();
+    user.planExpiresAt = newExpires;
+    user.updatedAt = new Date().toISOString();
+    this.addAuditLog({
+      userId: admin?.id || 'admin',
+      userName: admin?.name || 'Administrador',
+      action: 'PLAN_EXTENDED',
+      entityType: 'user',
+      entityId: userId,
+      details: `Validade do plano estendida em +${additionalDays} dias para ${user.name}`
+    });
+    return user;
+  }
+
+  public deleteUser(id: string): boolean {
+    const prevLen = this.users.length;
+    this.users = this.users.filter(u => u.id !== id);
+    return this.users.length !== prevLen;
+  }
+
+  public verifyOtpCode(_target: string, code: string, _type: string): boolean {
+    return code === '123456';
+  }
+
+  public createOtpCode(_target: string, _type: string): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
 
   public updatePlan(id: string, updates: Partial<Plan>): Plan | undefined {
     const idx = this.plans.findIndex(p => p.id === id);

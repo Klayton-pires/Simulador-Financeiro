@@ -28,9 +28,10 @@ import * as XLSX from 'xlsx';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { canUserSimulate } from '../utils/accessControl';
 import { ConfirmSimulationModal, SimulationSummaryItem } from './ConfirmSimulationModal';
-import { saveSimulationToFirestore } from '../services/firebase';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
+import { NumericInput } from './common/NumericInput';
+import { parseFormattedNumber } from '../utils/numberFormat';
 
 interface ServicesConsultingSimulatorProps {
   user: UserSafe | null;
@@ -53,36 +54,36 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
 
   // Configuration and inputs
   const [countryCode, setCountryCode] = useState<string>('AO');
-  const [serviceTitle, setServiceTitle] = useState<string>('Consultoria Fiscal e Auditoria de Balanço');
+  const [serviceTitle, setServiceTitle] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
   const [billingMode, setBillingMode] = useState<ServiceBillingMode>('hourly');
 
   // Pricing inputs
-  const [fixedAmount, setFixedAmount] = useState<string>('500000');
+  const [fixedAmount, setFixedAmount] = useState<string>('');
   
   // Hourly Mode
-  const [hourlyRate, setHourlyRate] = useState<string>('25000');
-  const [totalHours, setTotalHours] = useState<string>('16');
+  const [hourlyRate, setHourlyRate] = useState<string>('');
+  const [totalHours, setTotalHours] = useState<string>('');
 
   // Distance / KM Mode
-  const [ratePerKm, setRatePerKm] = useState<string>('750');
-  const [distanceKm, setDistanceKm] = useState<string>('120');
+  const [ratePerKm, setRatePerKm] = useState<string>('');
+  const [distanceKm, setDistanceKm] = useState<string>('');
   const [isRoundTrip, setIsRoundTrip] = useState<boolean>(true);
 
   // Optional Logistics paid by client
-  const [clientPaysTransport, setClientPaysTransport] = useState<boolean>(true);
-  const [transportCostPerPerson, setTransportCostPerPerson] = useState<string>('15000');
-  const [techniciansCount, setTechniciansCount] = useState<number>(2);
+  const [clientPaysTransport, setClientPaysTransport] = useState<boolean>(false);
+  const [transportCostPerPerson, setTransportCostPerPerson] = useState<string>('');
+  const [techniciansCount, setTechniciansCount] = useState<number>(1);
 
-  const [clientPaysMeals, setClientPaysMeals] = useState<boolean>(true);
-  const [mealAllowancePerPerson, setMealAllowancePerPerson] = useState<string>('8000');
-  const [daysDuration, setDaysDuration] = useState<number>(3);
+  const [clientPaysMeals, setClientPaysMeals] = useState<boolean>(false);
+  const [mealAllowancePerPerson, setMealAllowancePerPerson] = useState<string>('');
+  const [daysDuration, setDaysDuration] = useState<number>(1);
 
   // Fiscal Parameters
   const [vatRate, setVatRate] = useState<number>(14);
-  const [retentionRate, setRetentionRate] = useState<number>(6.5);
-  const [marginPercent, setMarginPercent] = useState<string>('20');
-  const [tpaRate, setTpaRate] = useState<number>(1.0);
+  const [retentionRate, setRetentionRate] = useState<string>('6,500');
+  const [marginPercent, setMarginPercent] = useState<string>('');
+  const [tpaRate, setTpaRate] = useState<string>('');
   const [applyRetention, setApplyRetention] = useState<boolean>(true);
 
   // UI state
@@ -115,8 +116,9 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
   useEffect(() => {
     if (country) {
       setVatRate(country.vatOptions[0]?.r ?? 14);
-      setTpaRate(country.tpa || 1.0);
-      setRetentionRate(country.retentionServiceRate ?? (countryCode === 'AO' ? 6.5 : countryCode === 'PT' ? 11.5 : 5.0));
+      setTpaRate(country.tpa ? String(country.tpa).replace('.', ',') : '');
+      const defRet = country.retentionServiceRate ?? (countryCode === 'AO' ? 6.5 : countryCode === 'PT' ? 11.5 : 5.0);
+      setRetentionRate(String(defRet).replace('.', ','));
       setHasCalculated(false);
     }
   }, [countryCode, countryVersion]);
@@ -124,16 +126,16 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
   // Calculations
   const calcBaseLabor = () => {
     if (billingMode === 'fixed') {
-      return parseFloat(fixedAmount) || 0;
+      return parseFormattedNumber(fixedAmount);
     }
     if (billingMode === 'hourly') {
-      const rate = parseFloat(hourlyRate) || 0;
-      const hours = parseFloat(totalHours) || 0;
+      const rate = parseFormattedNumber(hourlyRate);
+      const hours = parseFormattedNumber(totalHours);
       return rate * hours;
     }
     if (billingMode === 'distance') {
-      const kmRate = parseFloat(ratePerKm) || 0;
-      const km = parseFloat(distanceKm) || 0;
+      const kmRate = parseFormattedNumber(ratePerKm);
+      const km = parseFormattedNumber(distanceKm);
       const multiplier = isRoundTrip ? 2 : 1;
       return kmRate * km * multiplier;
     }
@@ -144,12 +146,12 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
 
   // Transport calculation
   const totalTransport = clientPaysTransport
-    ? (parseFloat(transportCostPerPerson) || 0) * (techniciansCount || 1)
+    ? parseFormattedNumber(transportCostPerPerson) * (techniciansCount || 1)
     : 0;
 
   // Meals calculation
   const totalMeals = clientPaysMeals
-    ? (parseFloat(mealAllowancePerPerson) || 0) * (techniciansCount || 1) * (daysDuration || 1)
+    ? parseFormattedNumber(mealAllowancePerPerson) * (techniciansCount || 1) * (daysDuration || 1)
     : 0;
 
   // Total Logistics expenses
@@ -159,7 +161,7 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
   const subtotalDirectCost = baseLabor + totalLogistics;
 
   // Profit Margin / Markup
-  const marginPct = parseFloat(marginPercent) || 0;
+  const marginPct = parseFormattedNumber(marginPercent);
   const markupAmount = baseLabor * (marginPct / 100);
 
   // Taxable Base (Subtotal of service + markup + reimbursable logistics if applicable)
@@ -172,11 +174,12 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
   const grossInvoiceTotal = taxableBase + vatAmount;
 
   // Withholding Tax (Retenção na Fonte)
-  const effectiveRetentionRate = applyRetention ? retentionRate : 0;
+  const effectiveRetentionRate = applyRetention ? parseFormattedNumber(retentionRate) : 0;
   const withholdingTaxAmount = taxableBase * (effectiveRetentionRate / 100);
 
   // TPA fee (if client pays by card/Multicaixa)
-  const tpaFeeAmount = grossInvoiceTotal * (tpaRate / 100);
+  const tpaFeeRate = parseFormattedNumber(tpaRate);
+  const tpaFeeAmount = grossInvoiceTotal * (tpaFeeRate / 100);
 
   // Net Cash Received by Service Provider
   const netReceivedFromClient = grossInvoiceTotal - withholdingTaxAmount;
@@ -222,20 +225,6 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
       }
       setHasCalculated(true);
       setShowConfirmModal(false);
-
-      // Save simulation to Cloud Firestore
-      if (user) {
-        saveSimulationToFirestore(user.id, 'services_consulting', {
-          country: countryCode,
-          billingMode,
-          baseLabor,
-          grossInvoiceTotal,
-          netBankReceived,
-          netOperationalProfit,
-          vatRate,
-          retentionRate: effectiveRetentionRate
-        }).catch(() => {});
-      }
     } finally {
       setIsCalculating(false);
     }
@@ -555,10 +544,10 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
               </div>
 
               <div>
-                <label className="text-[11px] font-mono text-slate-400 block mb-1">NOME DO CLIENTE / EMPRESA:</label>
+                <label className="text-[11px] font-mono text-slate-400 block mb-1">NOME DO UTILIZADOR / ENTIDADE CONTRATANTE:</label>
                 <input
                   type="text"
-                  placeholder="Ex: Sonangol E.P. / Cliente Particular"
+                  placeholder="Ex: Sonangol E.P. / Utilizador Particular"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
@@ -640,13 +629,13 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 space-y-2">
                 <label className="text-[11px] font-mono text-slate-300 block">VALOR FIXO TOTAL DO PROJETO ({country.curr}):</label>
                 <div className="relative">
-                  <input
-                    type="number"
+                  <NumericInput
                     value={fixedAmount}
-                    onChange={(e) => {
-                      setFixedAmount(e.target.value);
+                    onChange={(val) => {
+                      setFixedAmount(val);
                       setHasCalculated(false);
                     }}
+                    placeholder="0,000"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-12 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:border-indigo-500"
                   />
                   <span className="absolute right-3 top-2.5 text-xs text-slate-500 font-mono">{country.curr}</span>
@@ -658,25 +647,25 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] font-mono text-slate-300 block mb-1">TARIFA POR HORA ({country.curr}/h):</label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={hourlyRate}
-                    onChange={(e) => {
-                      setHourlyRate(e.target.value);
+                    onChange={(val) => {
+                      setHourlyRate(val);
                       setHasCalculated(false);
                     }}
+                    placeholder="0,000"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-indigo-500"
                   />
                 </div>
                 <div>
                   <label className="text-[11px] font-mono text-slate-300 block mb-1">TOTAL DE HORAS PREVISTAS:</label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={totalHours}
-                    onChange={(e) => {
-                      setTotalHours(e.target.value);
+                    onChange={(val) => {
+                      setTotalHours(val);
                       setHasCalculated(false);
                     }}
+                    placeholder="0,000"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -693,25 +682,25 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[11px] font-mono text-slate-300 block mb-1">PREÇO POR KM ({country.curr}/km):</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       value={ratePerKm}
-                      onChange={(e) => {
-                        setRatePerKm(e.target.value);
+                      onChange={(val) => {
+                        setRatePerKm(val);
                         setHasCalculated(false);
                       }}
+                      placeholder="0,000"
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-mono text-slate-300 block mb-1">DISTÂNCIA ENTRE PRESTADOR E CLIENTE (KM):</label>
-                    <input
-                      type="number"
+                    <label className="text-[11px] font-mono text-slate-300 block mb-1">DISTÂNCIA ENTRE PRESTADOR E UTILIZADOR (KM):</label>
+                    <NumericInput
                       value={distanceKm}
-                      onChange={(e) => {
-                        setDistanceKm(e.target.value);
+                      onChange={(val) => {
+                        setDistanceKm(val);
                         setHasCalculated(false);
                       }}
+                      placeholder="0,000"
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -731,17 +720,17 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                     Cobrar Deslocação de Ida e Volta (×2)
                   </label>
                   <span className="text-[11px] font-mono text-indigo-300">
-                    Subtotal Distância ({isRoundTrip ? (parseFloat(distanceKm) || 0) * 2 : distanceKm} km): <strong>{formatCurrency(baseLabor)}</strong>
+                    Subtotal Distância ({isRoundTrip ? parseFormattedNumber(distanceKm) * 2 : parseFormattedNumber(distanceKm)} km): <strong>{formatCurrency(baseLabor)}</strong>
                   </span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Card 3: Logistics & Team Expenses (Client Paid) */}
+          {/* Card 3: Logistics & Team Expenses (User Paid) */}
           <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-5 space-y-4">
             <h3 className="text-xs font-bold text-slate-200 font-mono flex items-center gap-2">
-              <Car className="w-4 h-4 text-amber-400" /> CUSTOS LOGÍSTICOS OPCIONAIS A CARGO DO CLIENTE
+              <Car className="w-4 h-4 text-amber-400" /> CUSTOS LOGÍSTICOS OPCIONAIS A CARGO DO UTILIZADOR
             </h3>
 
             {/* Transport Checkbox & Inputs */}
@@ -753,17 +742,17 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                   onChange={(e) => setClientPaysTransport(e.target.checked)}
                   className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700"
                 />
-                CLIENTE PAGA O TRANSPORTE DA EQUIPE / TÉCNICOS
+                UTILIZADOR PAGA O TRANSPORTE DA EQUIPE / TÉCNICOS
               </label>
 
               {clientPaysTransport && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div>
                     <label className="text-[10px] font-mono text-slate-400 block mb-1">CUSTO TRANSPORTE POR PESSOA ({country.curr}):</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       value={transportCostPerPerson}
-                      onChange={(e) => setTransportCostPerPerson(e.target.value)}
+                      onChange={setTransportCostPerPerson}
+                      placeholder="0,000"
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
                     />
                   </div>
@@ -795,17 +784,17 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                   onChange={(e) => setClientPaysMeals(e.target.checked)}
                   className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700"
                 />
-                CLIENTE PAGA A ALIMENTAÇÃO / DIÁRIAS DA EQUIPE
+                UTILIZADOR PAGA A ALIMENTAÇÃO / DIÁRIAS DA EQUIPE
               </label>
 
               {clientPaysMeals && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                   <div>
                     <label className="text-[10px] font-mono text-slate-400 block mb-1">DIÁRIA POR PESSOA ({country.curr}):</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       value={mealAllowancePerPerson}
-                      onChange={(e) => setMealAllowancePerPerson(e.target.value)}
+                      onChange={setMealAllowancePerPerson}
+                      placeholder="0,000"
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
                     />
                   </div>
@@ -849,10 +838,10 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
               <div>
                 <label className="text-[11px] font-mono text-slate-400 block mb-1">MARGEM DE LUCRO (%):</label>
                 <div className="flex items-center gap-1">
-                  <input
-                    type="number"
+                  <NumericInput
                     value={marginPercent}
-                    onChange={(e) => setMarginPercent(e.target.value)}
+                    onChange={setMarginPercent}
+                    placeholder="0,000"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold"
                   />
                   <span className="text-slate-500 font-mono text-xs">%</span>
@@ -877,11 +866,10 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
               <div>
                 <label className="text-[11px] font-mono text-slate-400 block mb-1">RETENÇÃO NA FONTE (%):</label>
                 <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    step="0.5"
+                  <NumericInput
                     value={retentionRate}
-                    onChange={(e) => setRetentionRate(Number(e.target.value))}
+                    onChange={setRetentionRate}
+                    placeholder="0,000"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono font-bold"
                   />
                   <span className="text-slate-500 font-mono text-xs">%</span>
@@ -891,13 +879,10 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
               <div>
                 <label className="text-[11px] font-mono text-slate-400 block mb-1">TAXA TPA / MULTICAIXA (%):</label>
                 <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="25"
+                  <NumericInput
                     value={tpaRate}
-                    onChange={(e) => setTpaRate(parseFloat(e.target.value) || 0)}
+                    onChange={setTpaRate}
+                    placeholder="0,000"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono font-bold"
                   />
                   <span className="text-slate-500 font-mono text-xs">%</span>
@@ -916,25 +901,8 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                   }}
                   className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700 cursor-pointer"
                 />
-                Aplicar Dedução de Retenção na Fonte (Cliente Corporativo)
+                Aplicar Dedução de Retenção na Fonte (Utilizador Corporativo)
               </label>
-
-              <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
-                <span>Taxa TPA Multicaixa:</span>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="25"
-                  value={tpaRate}
-                  onChange={(e) => {
-                    setTpaRate(parseFloat(e.target.value) || 0);
-                    setHasCalculated(false);
-                  }}
-                  className="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-xs text-indigo-300 font-mono font-bold text-center"
-                />
-                <span className="text-slate-400">%</span>
-              </div>
             </div>
 
             {/* Error notice */}
@@ -1036,7 +1004,7 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                     {formatCurrency(netBankReceived)}
                   </div>
                   <p className="text-[10px] text-emerald-400/70 font-mono">
-                    Montante creditado em banco após retenção obrigatória do cliente e tarifa POS.
+                    Montante creditado em banco após retenção obrigatória do utilizador e tarifa POS.
                   </p>
                 </div>
 

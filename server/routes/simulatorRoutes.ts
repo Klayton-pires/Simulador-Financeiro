@@ -1,12 +1,14 @@
 import { Router, Request, Response } from 'express';
 import * as XLSX from 'xlsx';
+import { db } from '../db.js';
 
 const router = Router();
 
-// 1. SIMULAÇÃO COMÉRCIO LOCAL & SERVIÇOS (Livre, sem base de dados e sem autenticação)
+// 1. SIMULAÇÃO COMÉRCIO LOCAL & SERVIÇOS (Livre, sem gravação em tabelas no banco de dados)
 router.post('/calculate-local', (req: Request, res: Response) => {
   try {
     const {
+      userId,
       countryCode,
       costNet,
       vatRate,
@@ -158,10 +160,22 @@ router.post('/calculate-local', (req: Request, res: Response) => {
       fixedPriceUsed: cFixedPrice > 0
     };
 
+    let userQueriesRemaining: number | undefined = undefined;
+    if (userId) {
+      const creditResult = db.consumeUserCredit(userId, 1);
+      if (!creditResult.success) {
+        return res.status(402).json({
+          error: 'Créditos de consulta esgotados. Por favor adquira um plano para continuar a efetuar simulações.',
+          queriesRemaining: 0
+        });
+      }
+      userQueriesRemaining = creditResult.queriesRemaining;
+    }
+
     return res.json({
       success: true,
       calculation: calcDetails,
-      queriesRemaining: 999999
+      queriesRemaining: userQueriesRemaining !== undefined ? userQueriesRemaining : 999999
     });
   } catch (err: any) {
     console.error('Error on calculate-local:', err);

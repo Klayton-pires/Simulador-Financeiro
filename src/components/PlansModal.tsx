@@ -30,6 +30,7 @@ import {
   Eye
 } from 'lucide-react';
 import { NanuCloudLogo } from './NanuCloudLogo';
+import { useAuth } from '../context/AuthContext';
 
 interface PlansModalProps {
   user: UserSafe | null;
@@ -48,6 +49,7 @@ export const PlansModal: React.FC<PlansModalProps> = ({
   onPurchaseSuccess,
   onOpenSupportChat
 }) => {
+  const { currentUser, addTransaction } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [unitQueryPriceKz, setUnitQueryPriceKz] = useState<number>(50);
   const [minCustomPriceKz, setMinCustomPriceKz] = useState<number>(500);
@@ -170,9 +172,10 @@ export const PlansModal: React.FC<PlansModalProps> = ({
 
   // Get effective logged in user
   const getActiveUser = (): UserSafe | null => {
+    if (currentUser) return currentUser;
     if (user) return user;
     try {
-      const stored = localStorage.getItem('nanucloud_session_user');
+      const stored = localStorage.getItem('nanucloud_current_user') || localStorage.getItem('nanucloud_session_user');
       if (stored) return JSON.parse(stored);
     } catch {
       // ignore
@@ -368,6 +371,25 @@ export const PlansModal: React.FC<PlansModalProps> = ({
         if (data.transaction) {
           setCreatedTransaction(data.transaction);
         }
+        
+        // Sync transaction to AuthContext for instant client profile & admin approval update
+        addTransaction({
+          userId: activeUser.id,
+          userName: activeUser.name,
+          userEmail: activeUser.email,
+          companyName: activeUser.company || activeUser.name,
+          nif: activeUser.nif,
+          planId: planId || 'plan_standard',
+          planName: checkoutPlanName,
+          amountKz: checkoutAmount,
+          queriesGranted: isCustomCheckout ? Math.floor(customAmountKz / unitQueryPriceKz) : (selectedPlanForCheckout?.queriesCount || 50),
+          validityDays: selectedPlanForCheckout?.validityDays || 30,
+          paymentMethod: paymentTab,
+          paymentReference: reference,
+          paymentProofName: proofFile?.name,
+          paymentProofUrl: proofFile?.dataUrl,
+          notes: notes
+        });
         if (paymentTab === 'paypal_visa' || paymentTab === 'stripe_card') {
           setSuccessDetails(`Pagamento digital validado com sucesso! As suas consultas (${data.transaction?.queriesCount || ''}) e acesso aos módulos foram imediatamente ativados na sua conta.`);
         } else {

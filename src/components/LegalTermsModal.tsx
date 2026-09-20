@@ -283,7 +283,7 @@ export const LegalTermsModal: React.FC<LegalTermsModalProps> = ({
                   <Sparkles className="w-4 h-4 text-indigo-400" /> Modo de Personalização de Termos (Super Administrador)
                 </span>
                 <p className="text-slate-300 text-[11px] font-sans">
-                  Pode alterar todos os textos, avisos de isenção de responsabilidade, cláusulas de reembolso e adicionar novas regras jurídicas. As alterações ficam visíveis imediatamente para todos os clientes e utilizadores.
+                  Pode alterar todos os textos, avisos de isenção de responsabilidade, cláusulas de reembolso e adicionar novas regras jurídicas. As alterações ficam visíveis imediatamente para todos os utilizadores.
                 </p>
               </div>
 

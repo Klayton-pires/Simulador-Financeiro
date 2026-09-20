@@ -110,15 +110,14 @@ export const PlansManagementSection: React.FC<PlansManagementSectionProps> = ({
     return DEFAULT_PLANS;
   });
 
-  // Free trial credits configuration
+  // Free trial credits configuration (Signup bonus defined by admin)
   const [freeRegisterCredits, setFreeRegisterCredits] = useState<number>(() => {
     const saved = localStorage.getItem('nanucloud_free_reg_credits');
-    return saved ? Number(saved) : 5;
+    return saved ? Number(saved) : 10;
   });
 
   const [guestCredits, setGuestCredits] = useState<number>(() => {
-    const saved = localStorage.getItem('nanucloud_guest_credits');
-    return saved ? Number(saved) : 3;
+    return 0; // Não há consulta grátis para visitantes anónimos
   });
 
   const [lowBalanceAlertLimit, setLowBalanceAlertLimit] = useState<number>(() => {
@@ -134,14 +133,28 @@ export const PlansManagementSection: React.FC<PlansManagementSectionProps> = ({
     });
   };
 
-  const handleSaveAll = () => {
+  const handleSaveAll = async () => {
     localStorage.setItem('nanucloud_plans_config', JSON.stringify(plans));
     localStorage.setItem('nanucloud_free_reg_credits', String(freeRegisterCredits));
-    localStorage.setItem('nanucloud_guest_credits', String(guestCredits));
+    localStorage.setItem('nanucloud_guest_credits', '0');
     localStorage.setItem('nanucloud_low_balance_limit', String(lowBalanceAlertLimit));
 
+    // Persistir também nas configurações globais do backend
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          freeQueriesOnRegister: freeRegisterCredits,
+          freeQueriesDaily: 0
+        })
+      });
+    } catch (e) {
+      console.warn('Erro ao atualizar configurações no servidor:', e);
+    }
+
     window.dispatchEvent(new Event('nanucloud_plans_updated'));
-    showSaveNotice('Configurações de planos e créditos salvas com sucesso!');
+    showSaveNotice(`Configurações de planos e bónus de inscrição (${freeRegisterCredits} créditos) salvas com sucesso!`);
   };
 
   return (
@@ -159,7 +172,7 @@ export const PlansManagementSection: React.FC<PlansManagementSectionProps> = ({
             </span>
           </div>
           <p className="text-slate-400 mt-1">
-            Defina preços em Kwanzas (Kz), quantidade de consultas incluídas, validade em dias e módulos desbloqueados para clientes.
+            Defina preços em Kwanzas (Kz), quantidade de consultas incluídas, validade em dias e módulos desbloqueados para utilizadores.
           </p>
         </div>
 
@@ -174,37 +187,45 @@ export const PlansManagementSection: React.FC<PlansManagementSectionProps> = ({
 
       {/* Free Trial & Policy Settings Card */}
       <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 space-y-3">
-        <h4 className="font-bold text-slate-200 flex items-center gap-2 uppercase text-xs">
-          <Coins className="w-4 h-4 text-amber-400" /> Política de Créditos Gratuitos & Alertas de Saldo
-        </h4>
+        <div className="flex items-center justify-between">
+          <h4 className="font-bold text-slate-200 flex items-center gap-2 uppercase text-xs">
+            <Coins className="w-4 h-4 text-amber-400" /> Bónus de Inscrição & Política de Créditos aos Utilizadores
+          </h4>
+          <span className="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded">
+            Definido pelo Administrador
+          </span>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-            <label className="block text-slate-400 text-[11px] mb-1">
-              Consultas p/ Novos Registos (Trial):
+          <div className="bg-slate-950 p-3 rounded-lg border border-indigo-500/40 shadow-inner">
+            <label className="block text-indigo-300 font-bold text-[11px] mb-1">
+              🎁 Bónus de Inscrição (Novos Utilizadores):
             </label>
             <input
               type="number"
               min="0"
               value={freeRegisterCredits}
-              onChange={(e) => setFreeRegisterCredits(Number(e.target.value))}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold"
+              onChange={(e) => setFreeRegisterCredits(Math.max(0, Number(e.target.value)))}
+              className="w-full bg-slate-900 border border-indigo-500/50 rounded-lg p-2 text-emerald-400 font-extrabold text-sm"
             />
-            <span className="text-[10px] text-slate-500 mt-1 block">Atribuídas ao criar conta.</span>
+            <span className="text-[10px] text-indigo-300/80 mt-1 block">
+              Créditos atribuídos automaticamente ao criar conta de utilizador. Atualiza o marketing em tempo real.
+            </span>
           </div>
 
-          <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 opacity-80">
             <label className="block text-slate-400 text-[11px] mb-1">
-              Consultas Gratuitas Visitante (Sem Login):
+              Consultas Gratuitas sem Registo (Visitante):
             </label>
             <input
               type="number"
-              min="0"
-              value={guestCredits}
-              onChange={(e) => setGuestCredits(Number(e.target.value))}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold"
+              disabled
+              value={0}
+              className="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2 text-slate-500 font-bold cursor-not-allowed"
             />
-            <span className="text-[10px] text-slate-500 mt-1 block">Permitidas por dia p/ IP público.</span>
+            <span className="text-[10px] text-rose-400/90 mt-1 block font-bold">
+              Desativado: Não há consultas grátis sem registo na plataforma.
+            </span>
           </div>
 
           <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
@@ -218,7 +239,7 @@ export const PlansManagementSection: React.FC<PlansManagementSectionProps> = ({
               onChange={(e) => setLowBalanceAlertLimit(Number(e.target.value))}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 font-bold"
             />
-            <span className="text-[10px] text-slate-500 mt-1 block">Exibe alerta quando atingir este valor.</span>
+            <span className="text-[10px] text-slate-500 mt-1 block">Exibe alerta quando o utilizador atingir este valor.</span>
           </div>
         </div>
       </div>

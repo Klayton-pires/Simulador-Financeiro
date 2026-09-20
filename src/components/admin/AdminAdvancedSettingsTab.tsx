@@ -7,23 +7,31 @@ import {
   Table,
   MessageSquare,
   CheckCircle2,
-  Settings
+  Settings,
+  Clock,
+  Check
 } from 'lucide-react';
 import { UserSafe } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import { PendingPaymentsSection } from './PendingPaymentsSection';
 import { ClientsManagementSection } from './ClientsManagementSection';
 import { StaffUsersManagementSection } from './StaffUsersManagementSection';
 import { PlansManagementSection } from './PlansManagementSection';
 import { PaymentMethodsSection } from './PaymentMethodsSection';
 import { ManualFiscalMatrixTab } from '../ManualFiscalMatrixTab';
 import { TicketsManagementTab } from '../TicketsManagementTab';
+import { DatabaseSqlManagementSection } from './DatabaseSqlManagementSection';
+import { Database } from 'lucide-react';
 
 export type AdminSettingsSection =
+  | 'pending_payments'
   | 'clients'
-  | 'users'
   | 'plans'
+  | 'tickets'
   | 'payments'
+  | 'database_sql'
   | 'fiscal_matrix'
-  | 'tickets';
+  | 'users';
 
 interface AdminAdvancedSettingsTabProps {
   currentUser: UserSafe;
@@ -32,10 +40,35 @@ interface AdminAdvancedSettingsTabProps {
 
 export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> = ({
   currentUser,
-  initialSection = 'clients'
+  initialSection = 'pending_payments'
 }) => {
+  const { transactions, isAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState<AdminSettingsSection>(initialSection);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // Security Guard: Deny access if not an administrator/staff
+  if (!isAdmin && currentUser.role === 'client') {
+    return (
+      <div className="bg-[#1E293B] border border-rose-500/30 rounded-2xl p-8 text-center max-w-lg mx-auto my-12 font-mono">
+        <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center mb-4">
+          <Shield className="w-6 h-6" />
+        </div>
+        <h2 className="text-base font-bold text-white mb-2">Acesso Reservado à Administração</h2>
+        <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+          Esta área de configurações e aprovações é restrita à equipa de gestão e suporte da NANUCLOUD. O seu perfil empresarial está ativo e tem acesso aos simuladores fiscais.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition"
+        >
+          Voltar aos Simuladores
+        </button>
+      </div>
+    );
+  }
+
+  const pendingCount = transactions.filter((t) => t.status === 'pending').length;
 
   const showSaveNotice = (msg: string) => {
     setSaveToast(msg);
@@ -44,42 +77,55 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
     }, 4000);
   };
 
-  const navItems: { id: AdminSettingsSection; label: string; icon: React.ReactNode; desc: string }[] = [
+  const navItems: { id: AdminSettingsSection; label: string; icon: React.ReactNode; desc: string; badge?: number }[] = [
     {
-      id: 'clients',
-      label: 'Clientes',
-      icon: <Users className="w-4 h-4" />,
-      desc: 'Empresas, subscrições e saldos'
+      id: 'pending_payments',
+      label: 'Aprovação de Pagamentos',
+      icon: <CreditCard className="w-4 h-4" />,
+      desc: 'Validação e atribuição de créditos',
+      badge: pendingCount
     },
     {
-      id: 'users',
-      label: 'Utilizadores',
-      icon: <Shield className="w-4 h-4" />,
-      desc: 'Equipa staff e administradores'
+      id: 'clients',
+      label: 'Clientes & Saldos',
+      icon: <Users className="w-4 h-4" />,
+      desc: 'Empresas e créditos manuais'
     },
     {
       id: 'plans',
       label: 'Planos & Preços',
       icon: <Package className="w-4 h-4" />,
-      desc: 'Pacotes, preços Kz e créditos'
+      desc: 'Preços Kz e créditos por plano'
+    },
+    {
+      id: 'tickets',
+      label: 'Chat Suporte & Tickets',
+      icon: <MessageSquare className="w-4 h-4" />,
+      desc: 'Atendimento aos clientes'
     },
     {
       id: 'payments',
       label: 'Formas de Pagamento',
-      icon: <CreditCard className="w-4 h-4" />,
+      icon: <Check className="w-4 h-4" />,
       desc: 'Contas bancárias e gateways'
     },
     {
-      id: 'fiscal_matrix',
-      label: 'Configuração Manual de Taxas',
-      icon: <Table className="w-4 h-4" />,
-      desc: 'Matriz e alíquotas por país'
+      id: 'database_sql',
+      label: 'Base de Dados & SQL',
+      icon: <Database className="w-4 h-4 text-indigo-400" />,
+      desc: 'Esquema SQL e criptografia Bcrypt'
     },
     {
-      id: 'tickets',
-      label: 'Chat com Ticket',
-      icon: <MessageSquare className="w-4 h-4" />,
-      desc: 'Suporte, tickets e chat ao vivo'
+      id: 'fiscal_matrix',
+      label: 'Configuração de Taxas',
+      icon: <Table className="w-4 h-4" />,
+      desc: 'Taxas manuais por jurisdição'
+    },
+    {
+      id: 'users',
+      label: 'Equipa & Permissões',
+      icon: <Shield className="w-4 h-4" />,
+      desc: 'Utilizadores administrativos'
     }
   ];
 
@@ -119,7 +165,7 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
       </div>
 
       {/* Navigation Sub-tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-slate-900/60 p-2 rounded-2xl border border-slate-800">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 bg-slate-900/60 p-2 rounded-2xl border border-slate-800">
         {navItems.map((item) => {
           const isActive = activeSection === item.id;
           return (
@@ -127,17 +173,24 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
               key={item.id}
               type="button"
               onClick={() => setActiveSection(item.id)}
-              className={`p-3 rounded-xl font-mono text-left transition flex flex-col justify-between gap-1.5 cursor-pointer border ${
+              className={`p-3 rounded-xl font-mono text-left transition flex flex-col justify-between gap-1.5 cursor-pointer border relative ${
                 isActive
                   ? 'bg-[#1E293B] text-slate-100 border-indigo-500/60 shadow-lg'
                   : 'bg-slate-950/40 text-slate-400 border-transparent hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span className={isActive ? 'text-indigo-400' : 'text-slate-500'}>
-                  {item.icon}
-                </span>
-                <span className="font-bold text-xs truncate">{item.label}</span>
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={isActive ? 'text-indigo-400' : 'text-slate-500'}>
+                    {item.icon}
+                  </span>
+                  <span className="font-bold text-xs truncate">{item.label}</span>
+                </div>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded-full font-bold">
+                    {item.badge}
+                  </span>
+                )}
               </div>
               <span className="text-[10px] text-slate-500 line-clamp-1">{item.desc}</span>
             </button>
@@ -147,15 +200,15 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
 
       {/* Active Section Content */}
       <div className="space-y-6">
-        {activeSection === 'clients' && (
-          <ClientsManagementSection
+        {activeSection === 'pending_payments' && (
+          <PendingPaymentsSection
             currentUser={currentUser}
             showSaveNotice={showSaveNotice}
           />
         )}
 
-        {activeSection === 'users' && (
-          <StaffUsersManagementSection
+        {activeSection === 'clients' && (
+          <ClientsManagementSection
             currentUser={currentUser}
             showSaveNotice={showSaveNotice}
           />
@@ -168,6 +221,10 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
           />
         )}
 
+        {activeSection === 'tickets' && (
+          <TicketsManagementTab currentUser={currentUser} />
+        )}
+
         {activeSection === 'payments' && (
           <PaymentMethodsSection
             currentUser={currentUser}
@@ -175,12 +232,19 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
           />
         )}
 
+        {activeSection === 'database_sql' && (
+          <DatabaseSqlManagementSection />
+        )}
+
         {activeSection === 'fiscal_matrix' && (
           <ManualFiscalMatrixTab currentUser={currentUser} />
         )}
 
-        {activeSection === 'tickets' && (
-          <TicketsManagementTab currentUser={currentUser} />
+        {activeSection === 'users' && (
+          <StaffUsersManagementSection
+            currentUser={currentUser}
+            showSaveNotice={showSaveNotice}
+          />
         )}
       </div>
     </div>

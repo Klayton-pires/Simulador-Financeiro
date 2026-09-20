@@ -140,7 +140,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
                   timestamp: inq.createdAt,
                   action: 'Ticket Criado (Staff Offline)',
                   actorName: inq.name,
-                  notes: 'Mensagem enviada pelo cliente aguardando seguimento'
+                  notes: 'Mensagem enviada pelo utilizador aguardando seguimento'
                 }
               ],
           createdAt: inq.createdAt,
@@ -380,7 +380,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
       case 'em_analise':
         return <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold">Em Análise</span>;
       case 'aguardando_cliente':
-        return <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono text-[10px]">Aguardando Cliente</span>;
+        return <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono text-[10px]">Aguardando Utilizador</span>;
       case 'transferido':
         return <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono text-[10px] font-bold">Transferido</span>;
       case 'resolvido':
@@ -416,7 +416,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Atendimento em direto com múltiplos clientes simultâneos ou seguimento de tickets de mensagens pendentes
+              Atendimento em direto com múltiplos utilizadores simultâneos ou seguimento de tickets de mensagens pendentes
             </p>
           </div>
         </div>
@@ -473,7 +473,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-200 font-mono flex items-center gap-1.5">
                   <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                  CLIENTES ATIVOS ({sessions.length})
+                  UTILIZADORES ATIVOS ({sessions.length})
                 </span>
                 <span className="text-[10px] text-emerald-400 font-mono font-semibold flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -554,7 +554,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
                             className={`w-2.5 h-2.5 rounded-full ring-2 ring-slate-900 shrink-0 ${
                               s.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'
                             }`}
-                            title={s.isOnline ? 'Cliente Online' : 'Cliente Offline'}
+                            title={s.isOnline ? 'Utilizador Online' : 'Utilizador Offline'}
                           />
                           <span className="font-bold text-slate-100 truncate max-w-[150px]">
                             {s.userName}
@@ -734,7 +734,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
                 <MessageSquare className="w-12 h-12 text-slate-600" />
                 <h3 className="text-sm font-bold text-slate-200 font-mono">SELECIONE UMA CONVERSA</h3>
                 <p className="text-xs max-w-sm text-center">
-                  Escolha um cliente da lista à esquerda para iniciar o atendimento em direto ou responder às suas mensagens.
+                  Escolha um utilizador da lista à esquerda para iniciar o atendimento em direto ou responder às suas mensagens.
                 </p>
               </div>
             )}
@@ -757,7 +757,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
                 type="text"
                 value={ticketSearch}
                 onChange={(e) => setTicketSearch(e.target.value)}
-                placeholder="Pesquisar por número, assunto ou cliente..."
+                placeholder="Pesquisar por número, assunto ou utilizador..."
                 className="bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono text-slate-200 py-2 px-3 focus:outline-none focus:border-indigo-500 w-full sm:w-72"
               />
             </div>
@@ -876,7 +876,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
                   {/* Client Info Banner */}
                   <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
                     <div>
-                      <span className="text-slate-500 block text-[10px]">CLIENTE:</span>
+                      <span className="text-slate-500 block text-[10px]">UTILIZADOR:</span>
                       <span className="text-slate-200 font-bold">{selectedTicket.userName}</span>
                     </div>
                     <div>
@@ -892,7 +892,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
                   {/* Client Message */}
                   <div className="space-y-2">
                     <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider block">
-                      MENSAGEM REGISTADA PELO CLIENTE:
+                      MENSAGEM REGISTADA PELO UTILIZADOR:
                     </span>
                     <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-4 text-xs font-mono text-slate-200 leading-relaxed whitespace-pre-wrap">
                       {selectedTicket.message}
@@ -938,7 +938,7 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
                         onClick={() => handleStatusChange(selectedTicket.id, 'aguardando_cliente')}
                         className="px-3 py-1 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-mono font-bold hover:bg-blue-500/30 transition-colors"
                       >
-                        Aguardando Cliente
+                        Aguardando Utilizador
                       </button>
                       <button
                         onClick={() => handleStatusChange(selectedTicket.id, 'resolvido')}
@@ -950,13 +950,13 @@ export const TicketsManagementTab: React.FC<TicketsManagementTabProps> = ({ curr
 
                     <form onSubmit={handleSendTicketReply} className="space-y-2">
                       <label className="block text-xs font-mono font-bold text-slate-300">
-                        DAR SEGUIMENTO (RESPOSTA AO CLIENTE):
+                        DAR SEGUIMENTO (RESPOSTA AO UTILIZADOR):
                       </label>
                       <textarea
                         rows={3}
                         value={ticketReplyText}
                         onChange={(e) => setTicketReplyText(e.target.value)}
-                        placeholder="Escreva a resposta de seguimento oficial ao cliente..."
+                        placeholder="Escreva a resposta de seguimento oficial ao utilizador..."
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs font-mono text-white focus:outline-none focus:border-indigo-500"
                       />
                       <div className="flex justify-end">

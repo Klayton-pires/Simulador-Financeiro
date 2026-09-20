@@ -1,31 +1,25 @@
 import { useState, useEffect } from 'react';
 
-export const DEFAULT_GUEST_FREE_CREDITS = 999999;
+export const DEFAULT_GUEST_FREE_CREDITS = 0;
 
 export function getGuestCredits(): number {
-  return 999999;
+  return 0;
 }
 
 export function useGuestCredit(): number {
-  return 999999;
+  return 0;
 }
 
 export const consumeGuestCredit = useGuestCredit;
 
 export function hasGuestCredits(): boolean {
-  return true;
+  return false;
 }
 
-export function resetGuestCredits(_count: number = 999999): void {
-  // Free unrestricted mode
+export function resetGuestCredits(_count: number = 0): void {
+  // No free consultations without registration
 }
 
 export function useGuestCredits(): number {
-  const [credits, setCredits] = useState<number>(999999);
-
-  useEffect(() => {
-    setCredits(999999);
-  }, []);
-
-  return credits;
+  return 0;
 }
