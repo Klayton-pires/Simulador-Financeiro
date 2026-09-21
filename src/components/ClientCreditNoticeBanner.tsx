@@ -37,8 +37,8 @@ export const ClientCreditNoticeBanner: React.FC<ClientCreditNoticeBannerProps> =
     );
   }
 
-  // If user is not logged in:
-  if (!user) {
+  // If user is not logged in or is visitor:
+  if (!user || user.id === 'visitante_anonimo') {
     return (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/15 via-slate-900 to-indigo-500/15 border border-emerald-500/30 text-xs font-sans text-slate-200 mb-4 shadow-sm animate-in fade-in duration-200">
         <div className="flex items-start gap-3">

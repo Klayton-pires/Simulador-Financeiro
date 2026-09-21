@@ -4,7 +4,7 @@ import { parseFormattedNumber, formatLiveInput, formatPtNumber } from '../../uti
 interface NumericInputProps {
   id?: string;
   value: string | number;
-  onChange: (value: string) => void;
+  onChange: (value: string, formatted?: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -66,7 +66,7 @@ export const NumericInput: React.FC<NumericInputProps> = ({
     // Permite digitação com dígitos, ponto de milhar e vírgula decimal
     const formatted = formatLiveInput(raw, maxDecimals);
     setDisplayValue(formatted);
-    onChange(formatted);
+    onChange(formatted, formatted);
   };
 
   const handleBlur = () => {
@@ -77,21 +77,21 @@ export const NumericInput: React.FC<NumericInputProps> = ({
     if (min !== undefined && num < min) {
       const formattedMin = formatPtNumber(min, maxDecimals, padDecimalsOnBlur);
       setDisplayValue(formattedMin);
-      onChange(formattedMin);
+      onChange(formattedMin, formattedMin);
       return;
     }
 
     if (max !== undefined && num > max) {
       const formattedMax = formatPtNumber(max, maxDecimals, padDecimalsOnBlur);
       setDisplayValue(formattedMax);
-      onChange(formattedMax);
+      onChange(formattedMax, formattedMax);
       return;
     }
 
     if (padDecimalsOnBlur) {
       const formatted = formatPtNumber(num, maxDecimals, true);
       setDisplayValue(formatted);
-      onChange(formatted);
+      onChange(formatted, formatted);
     }
   };
 

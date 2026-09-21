@@ -15,6 +15,10 @@ router.post('/calculate-local', (req: Request, res: Response) => {
       tpaRate,
       marginPct,
       fixedFinalPrice,
+      pricingMode,
+      desiredProfit,
+      desiredProfitType,
+      fixedPriceType,
       productName,
       itemType,
       retentionRate,
@@ -27,6 +31,7 @@ router.post('/calculate-local', (req: Request, res: Response) => {
       mealsTaxMode,
       mealsVatRate,
       lodgingCost,
+      lodgingDays,
       lodgingTaxMode,
       lodgingVatRate,
       otherExtrasCost,
@@ -40,6 +45,10 @@ router.post('/calculate-local', (req: Request, res: Response) => {
     const cTpaRate = Number(tpaRate) || 0;
     const cMargin = Number(marginPct) || 0;
     const cFixedPrice = Number(fixedFinalPrice) || 0;
+    const cDesiredProfit = Number(desiredProfit) || 0;
+    const sPricingMode = pricingMode || (cDesiredProfit > 0 ? 'desired_profit' : (cFixedPrice > 0 ? 'fixed_price' : 'margin'));
+    const sDesiredProfitType = desiredProfitType === 'net' ? 'net' : 'gross';
+    const sFixedPriceType = fixedPriceType === 'without_vat' ? 'without_vat' : 'with_vat';
     const cRetentionRate = Number(retentionRate) || 0;
     const isService = itemType === 'service' || cRetentionRate > 0;
 
@@ -67,7 +76,9 @@ router.post('/calculate-local', (req: Request, res: Response) => {
     const mealsCalc = computeExtraCostTax(cMealsCost, mealsTaxMode, Number(mealsVatRate) || cVatRate);
 
     const cLodgingCost = Number(lodgingCost) || 0;
-    const lodgingCalc = computeExtraCostTax(cLodgingCost, lodgingTaxMode, Number(lodgingVatRate) || cVatRate);
+    const cLodgingDays = Math.max(1, Number(lodgingDays) || 1);
+    const lodgingVal = cLodgingCost * cLodgingDays;
+    const lodgingCalc = computeExtraCostTax(lodgingVal, lodgingTaxMode, Number(lodgingVatRate) || cVatRate);
 
     const cOtherExtrasCost = Number(otherExtrasCost) || 0;
     const otherExtrasCalc = computeExtraCostTax(cOtherExtrasCost, otherExtrasTaxMode, Number(otherExtrasVatRate) || cVatRate);
@@ -79,9 +90,9 @@ router.post('/calculate-local', (req: Request, res: Response) => {
     const effectiveCostNet = cCostNet + totalExtraCostsNet;
 
     if (isService) {
-      if (cFixedPrice <= 0 && cCostNet <= 0) {
+      if (cFixedPrice <= 0 && cCostNet <= 0 && cDesiredProfit <= 0) {
         return res.status(400).json({
-          error: 'Na prestação de serviços indique o Valor do Serviço / PVP Pretendido ou Custo Operacional.'
+          error: 'Na prestação de serviços indique o Valor do Serviço / PVP Pretendido, Lucro Desejado ou Custo Operacional.'
         });
       }
     } else {
@@ -92,19 +103,49 @@ router.post('/calculate-local', (req: Request, res: Response) => {
       }
     }
 
+    const industrialTaxRate = countryCode === 'PT' ? 21 : 25;
+
     let pvpBase = 0;
     let pvpFinal = 0;
     let vatSale = 0;
     let profit = 0;
     let actualMarginApplied = 0;
 
-    if (cFixedPrice > 0) {
-      pvpFinal = cFixedPrice;
-      pvpBase = pvpFinal / (1 + cVatRate / 100);
-      vatSale = pvpFinal - pvpBase;
-      profit = pvpBase - effectiveCostNet;
+    if (sPricingMode === 'desired_profit' && cDesiredProfit > 0) {
+      if (sDesiredProfitType === 'net') {
+        // Target net profit after Industrial Tax (incomeTax) and TPA
+        const operatingProfitTarget = cDesiredProfit / (1 - industrialTaxRate / 100);
+        const tpaFactor = (1 + cVatRate / 100) * (cTpaRate / 100);
+        // profit - (effectiveCostNet + profit) * tpaFactor = operatingProfitTarget
+        // profit * (1 - tpaFactor) = operatingProfitTarget + effectiveCostNet * tpaFactor
+        const denom = Math.max(0.01, 1 - tpaFactor);
+        profit = (operatingProfitTarget + effectiveCostNet * tpaFactor) / denom;
+        pvpBase = effectiveCostNet + profit;
+        vatSale = pvpBase * (cVatRate / 100);
+        pvpFinal = pvpBase + vatSale;
+      } else {
+        // Desired profit before taxes (SEM IMPOSTO)
+        profit = cDesiredProfit;
+        pvpBase = effectiveCostNet + profit;
+        vatSale = pvpBase * (cVatRate / 100);
+        pvpFinal = pvpBase + vatSale;
+      }
+      actualMarginApplied = effectiveCostNet > 0 ? (profit / effectiveCostNet) * 100 : 0;
+    } else if (sPricingMode === 'fixed_price' || cFixedPrice > 0) {
+      if (sFixedPriceType === 'without_vat') {
+        pvpBase = cFixedPrice;
+        vatSale = pvpBase * (cVatRate / 100);
+        pvpFinal = pvpBase + vatSale;
+        profit = pvpBase - effectiveCostNet;
+      } else {
+        pvpFinal = cFixedPrice;
+        pvpBase = pvpFinal / (1 + cVatRate / 100);
+        vatSale = pvpFinal - pvpBase;
+        profit = pvpBase - effectiveCostNet;
+      }
       actualMarginApplied = effectiveCostNet > 0 ? (profit / effectiveCostNet) * 100 : 0;
     } else {
+      // Standard percentage margin
       profit = effectiveCostNet * (cMargin / 100);
       pvpBase = effectiveCostNet + profit;
       vatSale = pvpBase * (cVatRate / 100);
@@ -113,14 +154,16 @@ router.post('/calculate-local', (req: Request, res: Response) => {
     }
 
     const merchandiseVatCost = cCostNet * (cVatRate / 100);
+    const costGross = cCostNet + merchandiseVatCost;
     const totalInputVatSupported = merchandiseVatCost + totalExtraCostsVat;
+    const effectiveCostGross = effectiveCostNet + totalInputVatSupported;
+
     const netVatToPay = Math.max(0, vatSale - totalInputVatSupported);
     const tpaCost = pvpFinal * (cTpaRate / 100);
     
     const retentionAmount = pvpBase * (cRetentionRate / 100);
     const netReceived = pvpFinal - retentionAmount - tpaCost;
 
-    const industrialTaxRate = countryCode === 'PT' ? 21 : 25;
     const operatingProfit = profit - tpaCost;
     const incomeTax = operatingProfit > 0 ? operatingProfit * (industrialTaxRate / 100) : 0;
     const netProfit = operatingProfit - incomeTax;
@@ -129,7 +172,10 @@ router.post('/calculate-local', (req: Request, res: Response) => {
       countryCode,
       productName,
       costNet: cCostNet,
+      costGross,
+      merchandiseVatCost,
       effectiveCostNet,
+      effectiveCostGross,
       totalExtraCostsNet,
       totalExtraCostsVat,
       totalExtraCostsPaid,
@@ -142,10 +188,14 @@ router.post('/calculate-local', (req: Request, res: Response) => {
       vatRate: cVatRate,
       tpaRate: cTpaRate,
       marginPct: actualMarginApplied,
+      pricingMode: sPricingMode,
+      desiredProfit: cDesiredProfit,
+      desiredProfitType: sDesiredProfitType,
+      fixedPriceType: sFixedPriceType,
       profit,
+      profitBeforeTax: profit,
       pvpBase,
       vatSale,
-      merchandiseVatCost,
       totalInputVatSupported,
       netVatToPay,
       pvpFinal,
@@ -156,12 +206,13 @@ router.post('/calculate-local', (req: Request, res: Response) => {
       operatingProfit,
       incomeTax,
       netProfit,
+      industrialTaxRate,
       itemType: isService ? 'service' : 'product',
-      fixedPriceUsed: cFixedPrice > 0
+      fixedPriceUsed: sPricingMode === 'fixed_price' || cFixedPrice > 0
     };
 
     let userQueriesRemaining: number | undefined = undefined;
-    if (userId) {
+    if (userId && userId !== 'visitante_anonimo') {
       const creditResult = db.consumeUserCredit(userId, 1);
       if (!creditResult.success) {
         return res.status(402).json({

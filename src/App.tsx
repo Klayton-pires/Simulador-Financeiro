@@ -53,7 +53,7 @@ function AppContent() {
   const [isClientProfileOpen, setIsClientProfileOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
 
-  // Fallback guest profile if unauthenticated (Standard User / Visitor role - No free queries without registration)
+  // Fallback guest profile if unauthenticated (Standard User / Visitor role - Free demonstration queries)
   const guestOperator: UserSafe = {
     id: 'visitante_anonimo',
     name: 'Visitante Comercial',
@@ -62,7 +62,7 @@ function AppContent() {
     country: 'Angola',
     role: 'client',
     isActive: true,
-    queriesRemaining: 0,
+    queriesRemaining: 50,
     totalQueriesUsed: 0,
     activePlanId: 'plan_starter',
     activePlanName: 'Acesso Livre Simuladores',

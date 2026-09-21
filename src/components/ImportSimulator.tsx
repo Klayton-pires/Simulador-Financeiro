@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Download,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  SlidersHorizontal
 } from 'lucide-react';
 import {
   exportSimulationDossierPDF,
@@ -47,7 +48,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
   const [showExhaustedModal, setShowExhaustedModal] = useState<boolean>(false);
 
   const isStaff = isStaffOrAdmin(user?.role);
-  const isUnlocked = isStaff || !user || Boolean(user?.isImportUnlocked || user?.activePlanId || (user?.queriesRemaining && user.queriesRemaining > 0));
+  const isUnlocked = isStaff || !user || user?.id === 'visitante_anonimo' || Boolean(user?.isImportUnlocked || user?.activePlanId || (user?.queriesRemaining && user.queriesRemaining > 0));
 
   const [originCountry, setOriginCountry] = useState<string>('CN');
   const [destCountry, setDestCountry] = useState<string>('AO');
@@ -59,14 +60,15 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
   const [customsRate, setCustomsRate] = useState<string>('');
   const [iecRate, setIecRate] = useState<string>('');
   const [otherFees, setOtherFees] = useState<string>('');
-  const [marginPct, setMarginPct] = useState<string>('');
-  const [tpaRate, setTpaRate] = useState<string>('');
+  const [marginPct, setMarginPct] = useState<string>('25');
+  const [tpaRate, setTpaRate] = useState<string>('0');
   const [productName, setProductName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [results, setResults] = useState<any | null>(null);
+  const resultsRef = React.useRef<HTMLDivElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -82,16 +84,6 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
       }).format(val) + ` ${destFiscal.curr}`
     );
   };
-
-  // Reset results if user changes inputs to enforce explicit confirmation
-  const isFirstRender = React.useRef(true);
-  React.useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    setResults(null);
-  }, [fob, freight, insurance, customsRate, iecRate, otherFees, vatRate, marginPct, tpaRate, destCountry, originCountry]);
 
   const handleRequestCalculate = () => {
     setErrorMessage(null);
@@ -116,7 +108,8 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
       return;
     }
 
-    setShowConfirmModal(true);
+    // Direct calculation without blocking confirmation modal
+    handleConfirmAndExecute();
   };
 
   const handleConfirmAndExecute = async () => {
@@ -223,9 +216,13 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
 
       setResults(calcData);
       setShowConfirmModal(false);
-      setSuccessMessage('Cálculo de importação e despacho aduaneiro confirmado com sucesso!');
+      setSuccessMessage('Cálculo de importação e despacho aduaneiro apurado com sucesso!');
 
-      if (user) {
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+
+      if (user && user.id !== 'visitante_anonimo') {
         onCalculationDone(remaining);
       } else {
         const left = consumeGuestCredit();
@@ -599,54 +596,66 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={handleRequestCalculate}
-          disabled={isCalculating}
-          className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold py-3.5 px-6 rounded-2xl text-sm uppercase tracking-wider transition-all shadow-lg shadow-sky-950/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-        >
-          <Ship className="w-4 h-4" />
-          <span>{isCalculating ? 'A Processar Simulação...' : 'CALCULAR & CONFIRMAR IMPORTAÇÃO'}</span>
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <button
+            onClick={handleRequestCalculate}
+            disabled={isCalculating}
+            className="w-full sm:flex-1 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold py-3.5 px-6 rounded-2xl text-sm uppercase tracking-wider transition-all shadow-lg shadow-sky-950/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            <Ship className="w-4 h-4" />
+            <span>{isCalculating ? 'A Processar Simulação...' : 'CALCULAR IMPORTAÇÃO & DESPACHO'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowConfirmModal(true)}
+            className="w-full sm:w-auto px-4 py-3.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl text-xs font-mono border border-slate-700/80 flex items-center justify-center gap-1.5 transition cursor-pointer"
+            title="Rever ficha detalhada dos parâmetros de importação"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+            <span>Rever Parâmetros</span>
+          </button>
+        </div>
       </div>
 
       {/* Results View */}
-      {results ? (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          {/* Summary Card */}
-          <div className="bg-slate-850 border border-sky-500/40 rounded-3xl p-6 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
-                <Anchor className="w-5 h-5 text-sky-400" />
-                Resumo do Custo Base Nacionalizado
-              </h3>
+      <div ref={resultsRef}>
+        {results ? (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {/* Summary Card */}
+            <div className="bg-slate-850 border border-sky-500/40 rounded-3xl p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
+                  <Anchor className="w-5 h-5 text-sky-400" />
+                  Resumo do Custo Base Nacionalizado
+                </h3>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold flex items-center gap-1 border border-emerald-500/30">
-                  <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  SIMULAÇÃO CONFIRMADA
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold flex items-center gap-1 border border-emerald-500/30">
+                    <CheckCircle className="w-3 h-3 text-emerald-400" />
+                    SIMULAÇÃO APURADA
+                  </span>
 
-                <button
-                  onClick={handleExportPDF}
-                  className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
-                  title="Exportar Dossiê de Importação em PDF"
-                >
-                  <FileText className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Dossiê PDF</span>
-                </button>
+                  <button
+                    onClick={handleExportPDF}
+                    className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    title="Exportar Dossiê de Importação em PDF"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Dossiê PDF</span>
+                  </button>
 
-                <button
-                  onClick={handleExportExcel}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
-                  title="Exportar Dossiê de Importação em Excel (Sem Fórmulas)"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Exportar Excel</span>
-                </button>
+                  <button
+                    onClick={handleExportExcel}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    title="Exportar Dossiê de Importação em Excel (Sem Fórmulas)"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Exportar Excel</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
                 <p className="text-xs text-slate-400">Valor CIF (Total Internacional)</p>
                 <p className="text-base font-extrabold text-slate-100 mt-1">{formatMoney(results.cif)}</p>
@@ -737,16 +746,39 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
           </div>
         </div>
       ) : (
-        <div className="bg-[#1E293B]/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-3">
+        <div className="bg-[#1E293B]/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center mx-auto">
             <Anchor className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-slate-200 font-mono">Aguardando Confirmação da Simulação</h3>
+          <h3 className="text-sm font-bold text-slate-200 font-mono uppercase tracking-wide">Pronto para Simular Importação Aduaneira</h3>
           <p className="text-xs text-slate-400 font-mono max-w-sm mx-auto leading-relaxed">
-            Preencha os valores da mercadoria CIF e encargos aduaneiros e clique no botão <strong className="text-sky-300">"CALCULAR & CONFIRMAR IMPORTAÇÃO"</strong> para apurar o custo nacionalizado e PVP sugerido.
+            Preencha os valores da mercadoria CIF e encargos aduaneiros e clique em <strong className="text-sky-300">"CALCULAR IMPORTAÇÃO & DESPACHO"</strong> para apurar o custo nacionalizado e PVP sugerido.
           </p>
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setFob('5.000,00');
+                setFreight('1.200,00');
+                setInsurance('150,00');
+                setCustomsRate('10');
+                setIecRate('0');
+                setOtherFees('250,00');
+                setMarginPct('25');
+                setProductName('Lote Eletrónicos Importação');
+                setTimeout(() => {
+                  handleConfirmAndExecute();
+                }, 50);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-bold transition cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Carregar Exemplo (FOB $5.000) e Calcular Imediatamente
+            </button>
+          </div>
         </div>
       )}
+      </div>
 
       {/* Confirmation Modal before calculating results */}
       <ConfirmSimulationModal

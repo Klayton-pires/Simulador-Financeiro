@@ -29,6 +29,7 @@ import { isStaffOrAdmin, canUserSimulate } from '../utils/accessControl';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
+import { parseFormattedNumber } from '../utils/numberFormat';
 
 interface ExcelBatchSimulatorProps {
   user: UserSafe | null;
@@ -188,7 +189,7 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
       return;
     }
 
-    const margin = parseFloat(marginPct);
+    const margin = parseFormattedNumber(marginPct);
     if (isNaN(margin) || margin < 0) {
       setErrorMessage('Por favor, defina uma Margem Global (%) válida antes de calcular.');
       return;
@@ -242,7 +243,7 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
         `Cálculo concluído com sucesso! ${resData.processedItems.length} linhas processadas com as colunas NANUCLOUD aplicadas.`
       );
 
-      if (user) {
+      if (user && user.id !== 'visitante_anonimo') {
         onCalculationDone(resData.queriesRemaining);
       } else {
         const left = consumeGuestCredit();
@@ -335,15 +336,15 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
 
   // Resumo executivo dos dados processados
   const totalCostCalculated = processedData
-    ? processedData.reduce((acc, r) => acc + (parseFloat(r['[NANUCLOUD] Custo Base (S/ IVA)']) || 0), 0)
+    ? processedData.reduce((acc, r) => acc + (parseFormattedNumber(r['[NANUCLOUD] Custo Base (S/ IVA)']) || 0), 0)
     : 0;
 
   const totalPvpFinalCalculated = processedData
-    ? processedData.reduce((acc, r) => acc + (parseFloat(r['[NANUCLOUD] PVP Final Recomendado (C/ IVA)']) || 0), 0)
+    ? processedData.reduce((acc, r) => acc + (parseFormattedNumber(r['[NANUCLOUD] PVP Final Recomendado (C/ IVA)']) || 0), 0)
     : 0;
 
   const totalNetProfitCalculated = processedData
-    ? processedData.reduce((acc, r) => acc + (parseFloat(r['[NANUCLOUD] Lucro Líquido Real']) || 0), 0)
+    ? processedData.reduce((acc, r) => acc + (parseFormattedNumber(r['[NANUCLOUD] Lucro Líquido Real']) || 0), 0)
     : 0;
 
   if (!isUnlocked) {

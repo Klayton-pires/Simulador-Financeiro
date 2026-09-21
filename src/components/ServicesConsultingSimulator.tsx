@@ -20,7 +20,9 @@ import {
   Building2,
   Calendar,
   Save,
-  RotateCcw
+  RotateCcw,
+  Sparkles,
+  SlidersHorizontal
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -91,6 +93,7 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
   const [pdfGenerating, setPdfGenerating] = useState<boolean>(false);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
   const [hasCalculated, setHasCalculated] = useState<boolean>(false);
+  const resultsRef = React.useRef<HTMLDivElement>(null);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -196,7 +199,7 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
     setErrorMessage(null);
 
     if (baseLabor <= 0) {
-      setErrorMessage('Por favor defina valores válidos para os honorários de serviço.');
+      setErrorMessage('Por favor introduza o valor dos honorários de serviço (Ex: 150.000 Kz).');
       return;
     }
 
@@ -208,16 +211,17 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
       return;
     }
 
-    setShowConfirmModal(true);
+    // Direct execution without blocking modal
+    handleConfirmAndExecute();
   };
 
   const handleConfirmAndExecute = async () => {
     setIsCalculating(true);
     try {
-      if (user && user.queriesRemaining > 0 && user.role !== 'staff' && user.role !== 'admin' && user.role !== 'admin_level1' && user.role !== 'super_admin') {
+      if (user && user.id !== 'visitante_anonimo' && user.queriesRemaining > 0 && user.role !== 'staff' && user.role !== 'admin' && user.role !== 'admin_level1' && user.role !== 'super_admin') {
         const newQueries = Math.max(0, user.queriesRemaining - 1);
         onCalculationDone(newQueries);
-      } else if (!user) {
+      } else if (!user || user.id === 'visitante_anonimo') {
         const left = consumeGuestCredit();
         if (left === 0) {
           setTimeout(() => setShowExhaustedModal(true), 1200);
@@ -225,6 +229,9 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
       }
       setHasCalculated(true);
       setShowConfirmModal(false);
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } finally {
       setIsCalculating(false);
     }
@@ -234,7 +241,7 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
     {
       label: 'Honorários Base de Serviço',
       value: formatCurrency(baseLabor),
-      detail: billingMode === 'fixed' ? 'Valor Fixo Fechado' : billingMode === 'hourly' ? `${totalHours}h a ${formatCurrency(parseFloat(hourlyRate) || 0)}/h` : `${distanceKm} km`,
+      detail: billingMode === 'fixed' ? 'Valor Fixo Fechado' : billingMode === 'hourly' ? `${totalHours}h a ${formatCurrency(parseFormattedNumber(hourlyRate) || 0)}/h` : `${distanceKm} km`,
       isHighlight: true
     },
     {
@@ -307,8 +314,8 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
           billingMode === 'fixed'
             ? 'Valor Fixo Global'
             : billingMode === 'hourly'
-            ? `Por Hora (${totalHours}h a ${formatCurrency(parseFloat(hourlyRate) || 0)}/h)`
-            : `Por Distância (${distanceKm} km ${isRoundTrip ? 'Ida e Volta' : 'Só Ida'} a ${formatCurrency(parseFloat(ratePerKm) || 0)}/km)`
+            ? `Por Hora (${totalHours}h a ${formatCurrency(parseFormattedNumber(hourlyRate) || 0)}/h)`
+            : `Por Distância (${distanceKm} km ${isRoundTrip ? 'Ida e Volta' : 'Só Ida'} a ${formatCurrency(parseFormattedNumber(ratePerKm) || 0)}/km)`
         }`,
         14,
         57
@@ -897,7 +904,6 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                   checked={applyRetention}
                   onChange={(e) => {
                     setApplyRetention(e.target.checked);
-                    setHasCalculated(false);
                   }}
                   className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700 cursor-pointer"
                 />
@@ -914,22 +920,31 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
             )}
 
             {/* Botão de Calcular */}
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
               <button
                 type="button"
                 onClick={handleRequestCalculate}
                 disabled={isCalculating}
-                className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 active:scale-[0.98] text-white rounded-xl text-sm font-mono font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="w-full sm:flex-1 py-3.5 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 active:scale-[0.98] text-white rounded-xl text-sm font-mono font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 <TrendingUp className="w-4 h-4" />
-                <span>{isCalculating ? 'A Processar Simulação...' : 'CALCULAR & CONFIRMAR SIMULAÇÃO'}</span>
+                <span>{isCalculating ? 'A Processar Simulação...' : 'CALCULAR PRESTAÇÃO DE SERVIÇO'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                className="w-full sm:w-auto px-4 py-3.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-mono border border-slate-700/80 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                title="Rever ficha detalhada dos parâmetros"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                <span>Rever Parâmetros</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Right Column: Live Fiscal & Financial Breakdown */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-6" ref={resultsRef}>
           
           {hasCalculated ? (
             /* Main Financial Summary Card */
@@ -1039,14 +1054,33 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
               </div>
             </div>
           ) : (
-            <div className="bg-[#1E293B]/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-3 sticky top-4">
+            <div className="bg-[#1E293B]/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-4 sticky top-4">
               <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
                 <Receipt className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-bold text-slate-200 font-mono">Aguardando Confirmação da Simulação</h3>
+              <h3 className="text-sm font-bold text-slate-200 font-mono uppercase tracking-wide">Pronto para Simular Serviços</h3>
               <p className="text-xs text-slate-400 font-mono max-w-sm mx-auto leading-relaxed">
-                Preencha os dados do serviço e despesas logísticas e clique no botão <strong className="text-indigo-300">"CALCULAR & CONFIRMAR SIMULAÇÃO"</strong> para apurar o total bruto, retenções e valor líquido.
+                Preencha os honorários do serviço e despesas logísticas e clique no botão <strong className="text-indigo-300">"CALCULAR PRESTAÇÃO DE SERVIÇO"</strong> para apurar o total bruto, retenções e valor líquido.
               </p>
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBillingMode('fixed');
+                    setFixedAmount('150.000,00');
+                    setMarginPercent('20');
+                    setClientPaysTransport(true);
+                    setTransportCostPerPerson('15.000,00');
+                    setTimeout(() => {
+                      handleConfirmAndExecute();
+                    }, 50);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-bold transition cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  Carregar Exemplo (150.000 Kz) e Calcular
+                </button>
+              </div>
             </div>
           )}
         </div>

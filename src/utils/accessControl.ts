@@ -73,11 +73,44 @@ export function canUserSimulate(user: UserSafe | null): {
   isGuest?: boolean;
   requiresAuth?: boolean;
 } {
+  // If not logged in or guest operator, allow with guest demo mode
+  if (!user || user.id === 'visitante_anonimo') {
+    return {
+      allowed: true,
+      reason: 'ok',
+      message: 'Acesso de demonstração ativo para visitantes.',
+      isGuest: true,
+      requiresAuth: false
+    };
+  }
+
+  // Staff and admins have unlimited queries
+  if (isStaffOrAdmin(user.role)) {
+    return {
+      allowed: true,
+      reason: 'ok',
+      message: 'Acesso Staff / Administrador ilimitado.',
+      isGuest: false,
+      requiresAuth: false
+    };
+  }
+
+  // Client user
+  if ((user.queriesRemaining || 0) <= 0) {
+    return {
+      allowed: false,
+      reason: 'no_credits',
+      message: 'O seu saldo de consultas esgotou-se. Por favor recarregue a sua conta para continuar a simular.',
+      isGuest: false,
+      requiresAuth: false
+    };
+  }
+
   return {
     allowed: true,
     reason: 'ok',
-    message: 'Acesso livre a todas as simulações em tempo real.',
-    isGuest: !user,
+    message: 'Acesso ativo à simulação fiscal.',
+    isGuest: false,
     requiresAuth: false
   };
 }

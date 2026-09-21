@@ -18,7 +18,9 @@ import {
   CheckCircle2,
   DollarSign,
   Receipt,
-  HelpCircle
+  HelpCircle,
+  Sparkles,
+  SlidersHorizontal
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -66,7 +68,7 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
 
   // Commission Scope & Mode
   const [commissionScope, setCommissionScope] = useState<'products_only' | 'services_only' | 'total_deal' | 'fixed_amount'>('total_deal');
-  const [commissionPct, setCommissionPct] = useState<string>('');
+  const [commissionPct, setCommissionPct] = useState<string>('5');
   const [fixedCommissionAmount, setFixedCommissionAmount] = useState<string>('');
   
   // Fiscal parameters
@@ -80,6 +82,7 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [results, setResults] = useState<any | null>(null);
+  const resultsRef = React.useRef<HTMLDivElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -296,7 +299,8 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
       return;
     }
 
-    setShowConfirmModal(true);
+    // Direct execution without blocking modal
+    handleConfirmAndExecute();
   };
 
   const handleConfirmAndExecute = async () => {
@@ -305,11 +309,14 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
       const calc = calculateIntermediation();
       setResults(calc);
       setShowConfirmModal(false);
-      setSuccessMessage('Simulação de intermediação confirmada e calculada com sucesso!');
+      setSuccessMessage('Simulação de intermediação apurada com sucesso!');
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
 
-      if (user && user.queriesRemaining > 0 && user.role !== 'staff' && user.role !== 'admin' && user.role !== 'admin_level1' && user.role !== 'super_admin') {
+      if (user && user.id !== 'visitante_anonimo' && user.queriesRemaining > 0 && user.role !== 'staff' && user.role !== 'admin' && user.role !== 'admin_level1' && user.role !== 'super_admin') {
         onCalculationDone(Math.max(0, user.queriesRemaining - 1));
-      } else if (!user) {
+      } else if (!user || user.id === 'visitante_anonimo') {
         const left = consumeGuestCredit();
         if (left === 0) {
           setTimeout(() => setShowExhaustedModal(true), 1200);
@@ -1042,35 +1049,45 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
             className="w-full sm:flex-1 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white font-bold py-3.5 px-6 rounded-xl text-xs font-mono uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             <Calculator className="w-4 h-4" />
-            <span>{isCalculating ? 'A PROCESSAR SIMULAÇÃO...' : 'CALCULAR & CONFIRMAR COMISSÕES'}</span>
+            <span>{isCalculating ? 'A PROCESSAR SIMULAÇÃO...' : 'CALCULAR COMISSÕES & RETENÇÃO'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowConfirmModal(true)}
+            className="w-full sm:w-auto px-4 py-3.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-mono border border-slate-700/80 flex items-center justify-center gap-1.5 transition cursor-pointer"
+            title="Rever ficha detalhada dos parâmetros"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+            <span>Rever Parâmetros</span>
           </button>
         </div>
       </div>
 
       {/* Results Breakdown (Gated behind Calculate button) */}
-      {activeResults ? (
-        <div className="space-y-6 animate-in zoom-in-95 duration-200">
-          {/* Action Bar with Export Buttons */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#1E293B] border border-slate-800 rounded-xl p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-emerald-400" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-bold text-slate-100 font-mono uppercase">
-                    Demonstração da Intermediação & Liquidação Fiscal
-                  </h3>
-                  <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                    SIMULAÇÃO CONFIRMADA
+      <div ref={resultsRef}>
+        {activeResults ? (
+          <div className="space-y-6 animate-in zoom-in-95 duration-200">
+            {/* Action Bar with Export Buttons */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#1E293B] border border-slate-800 rounded-xl p-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-slate-100 font-mono uppercase">
+                      Demonstração da Intermediação & Liquidação Fiscal
+                    </h3>
+                    <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      SIMULAÇÃO APURADA
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Base de Cálculo: {activeResults.commissionScopeLabel} ({formatMoney(activeResults.commissionBaseTarget)})
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  Base de Cálculo: {activeResults.commissionScopeLabel} ({formatMoney(activeResults.commissionBaseTarget)})
-                </span>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={handleExportExcel}
                 className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
@@ -1257,16 +1274,35 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
           </div>
         </div>
       ) : (
-        <div className="bg-[#1E293B]/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-3">
+        <div className="bg-[#1E293B]/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
             <Calculator className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-slate-200 font-mono">Aguardando Confirmação da Simulação</h3>
+          <h3 className="text-sm font-bold text-slate-200 font-mono uppercase tracking-wide">Pronto para Simular Intermediação</h3>
           <p className="text-xs text-slate-400 font-mono max-w-sm mx-auto leading-relaxed">
-            Preencha os valores da transação e parâmetros da comissão e clique no botão <strong className="text-indigo-300">"CALCULAR & CONFIRMAR COMISSÕES"</strong> para apurar os montantes e retenções fiscais.
+            Preencha os valores da transação e parâmetros da comissão e clique no botão <strong className="text-indigo-300">"CALCULAR COMISSÕES & RETENÇÃO"</strong> para apurar os montantes e retenções fiscais.
           </p>
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setDealTitle('Intermediação de Lote Industrial');
+                setProductsTotal('10.000.000,00');
+                setCommissionScope('total_deal');
+                setCommissionPct('5');
+                setTimeout(() => {
+                  handleConfirmAndExecute();
+                }, 50);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-bold transition cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Carregar Exemplo (10.000.000 Kz a 5%) e Calcular
+            </button>
+          </div>
         </div>
       )}
+      </div>
 
       {/* Confirmation Modal before calculating results */}
       <ConfirmSimulationModal

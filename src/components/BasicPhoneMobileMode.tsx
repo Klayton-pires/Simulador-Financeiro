@@ -100,7 +100,7 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
     try {
       let remaining = user?.queriesRemaining ?? 5;
 
-      if (user) {
+      if (user && user.id !== 'visitante_anonimo') {
         try {
           const res = await fetch('/api/simulator/calculate-local', {
             method: 'POST',

@@ -1,25 +1,62 @@
 import { useState, useEffect } from 'react';
 
-export const DEFAULT_GUEST_FREE_CREDITS = 0;
+export const DEFAULT_GUEST_FREE_CREDITS = 50;
 
 export function getGuestCredits(): number {
-  return 0;
+  try {
+    const saved = localStorage.getItem('nanucloud_guest_credits');
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      return isNaN(parsed) ? DEFAULT_GUEST_FREE_CREDITS : parsed;
+    }
+    localStorage.setItem('nanucloud_guest_credits', String(DEFAULT_GUEST_FREE_CREDITS));
+    return DEFAULT_GUEST_FREE_CREDITS;
+  } catch {
+    return DEFAULT_GUEST_FREE_CREDITS;
+  }
 }
 
-export function useGuestCredit(): number {
-  return 0;
+export function consumeGuestCredit(amount: number = 1): number {
+  try {
+    const current = getGuestCredits();
+    const next = Math.max(0, current - amount);
+    localStorage.setItem('nanucloud_guest_credits', String(next));
+    window.dispatchEvent(new CustomEvent('nanucloud_guest_credits_updated', { detail: next }));
+    return next;
+  } catch {
+    return DEFAULT_GUEST_FREE_CREDITS;
+  }
 }
-
-export const consumeGuestCredit = useGuestCredit;
 
 export function hasGuestCredits(): boolean {
-  return false;
+  return getGuestCredits() > 0;
 }
 
-export function resetGuestCredits(_count: number = 0): void {
-  // No free consultations without registration
+export function resetGuestCredits(count: number = DEFAULT_GUEST_FREE_CREDITS): void {
+  try {
+    localStorage.setItem('nanucloud_guest_credits', String(count));
+    window.dispatchEvent(new CustomEvent('nanucloud_guest_credits_updated', { detail: count }));
+  } catch {
+    // ignore
+  }
 }
 
 export function useGuestCredits(): number {
-  return 0;
+  const [credits, setCredits] = useState<number>(getGuestCredits);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      if (typeof e?.detail === 'number') {
+        setCredits(e.detail);
+      } else {
+        setCredits(getGuestCredits());
+      }
+    };
+    window.addEventListener('nanucloud_guest_credits_updated', handler);
+    return () => window.removeEventListener('nanucloud_guest_credits_updated', handler);
+  }, []);
+
+  return credits;
 }
+
+export const useGuestCredit = consumeGuestCredit;
