@@ -15,7 +15,8 @@ import {
   Shield,
   Coins,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -32,6 +33,7 @@ export type ActiveTab =
   | 'admin_settings'
   | 'plans'
   | 'history'
+  | 'analytics_dashboard'
   | 'admin';
 
 interface SidebarProps {
@@ -238,6 +240,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-transform" />
           </button>
         )}
+      </div>
+
+      {/* Secção de Inteligência & Dashboard */}
+      <div className="bg-[#0F172A] border border-slate-800 rounded-xl p-3 flex flex-col gap-1 shadow-sm">
+        <div className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold mb-1 px-1 font-mono flex items-center justify-between">
+          <span>Inteligência & Gráficos</span>
+          <span className="text-indigo-400 font-bold text-[9px] bg-indigo-500/10 px-1.5 py-0.2 rounded border border-indigo-500/20">NOVO</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onTabChange('analytics_dashboard')}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono font-medium transition cursor-pointer text-left ${
+            activeTab === 'analytics_dashboard' || activeTab === 'history'
+              ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800/80 bg-slate-900/50 border border-slate-800'
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'analytics_dashboard' || activeTab === 'history' ? 'text-white' : 'text-indigo-400'}`} />
+            <span className="font-semibold truncate">Dashboard Financeiro</span>
+          </div>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shrink-0 font-mono ${
+            activeTab === 'analytics_dashboard' || activeTab === 'history' ? 'bg-indigo-700/50 text-white' : 'bg-indigo-400/20 text-indigo-300'
+          }`}>
+            Recharts
+          </span>
+        </button>
       </div>
 
       {/* Main Section */}

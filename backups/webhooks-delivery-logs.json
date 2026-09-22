@@ -1,0 +1,37 @@
+[
+  {
+    "id": "del_1790110450266_0lz2",
+    "webhookId": "whk_test_temporary",
+    "webhookName": "Teste HTTPBIN",
+    "url": "https://httpbin.org/post",
+    "event": "simulation.completed",
+    "status": "success",
+    "httpStatusCode": 200,
+    "durationMs": 344,
+    "payload": {
+      "event": "simulation.completed",
+      "deliveryId": "del_1790110450266_0lz2",
+      "timestamp": "2026-09-22T20:54:10.266Z",
+      "webhookId": "whk_test_temporary",
+      "webhookName": "Teste HTTPBIN",
+      "data": {
+        "simulationId": "sim_test_1790110450265",
+        "simulationType": "local_commerce_and_services",
+        "productName": "Servidor Dell PowerEdge R750 (Simulação de Teste)",
+        "itemType": "product",
+        "costNet": 2450000,
+        "marginPct": 22,
+        "vatRate": 14,
+        "pvpFinal": 3407810,
+        "vatSale": 418460,
+        "netProfit": 539000,
+        "currency": "AOA",
+        "country": "Angola",
+        "calculatedAt": "2026-09-22T20:54:10.265Z",
+        "triggeredBy": "manual_webhook_test_console"
+      }
+    },
+    "responseBody": "{\n  \"args\": {}, \n  \"data\": \"{\\\"event\\\":\\\"simulation.completed\\\",\\\"deliveryId\\\":\\\"del_1790110450266_0lz2\\\",\\\"timestamp\\\":\\\"2026-09-22T20:54:10.266Z\\\",\\\"webhookId\\\":\\\"whk_test_temporary\\\",\\\"webhookName\\\":\\\"Teste HTTPBIN\\\",\\\"data\\\":{\\\"simulationId\\\":\\\"sim_test_1790110450265\\\",\\\"simulationType\\\":\\\"local_commerce_and_services\\\",\\\"productName\\\":\\\"Servidor Dell PowerEdge R750 (Simula\\u00e7\\u00e3o de Teste)\\\",\\\"itemType\\\":\\\"product\\\",\\\"costNet\\\":2450000,\\\"marginPct\\\":22,\\\"vatRate\\\":14,\\\"pvpFinal\\\":34078",
+    "timestamp": "2026-09-22T20:54:10.266Z"
+  }
+]

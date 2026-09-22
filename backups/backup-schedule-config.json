@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "dailyHourUtc": 3,
+  "dailyMinuteUtc": 0,
+  "retentionDays": 30,
+  "cloudProvider": "cloud_storage_redundant",
+  "cloudStorageEndpoint": "https://storage.googleapis.com/nanucloud-backups-vault",
+  "totalBackupsCount": 2,
+  "lastRunAt": "2026-09-22T20:49:54.425Z"
+}

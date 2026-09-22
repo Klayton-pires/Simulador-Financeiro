@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserSafe } from '../types';
 import { COUNTRIES_DB, getEffectiveCountryFiscal, getAvailableCountryList } from '../data/countries';
 import { SupportedLang, TRANSLATIONS } from '../i18n/translations';
@@ -28,6 +28,7 @@ import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
 import { NumericInput } from './common/NumericInput';
 import { parseFormattedNumber } from '../utils/numberFormat';
+import { showToast } from '../context/NotificationContext';
 
 interface ImportSimulatorProps {
   user: UserSafe | null;
@@ -72,6 +73,20 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
   const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'superadmin' || user?.role === 'admin_level1' || user?.role === 'admin';
   const availableCountries = getAvailableCountryList(isSuperAdmin);
   const destFiscal = getEffectiveCountryFiscal(destCountry);
@@ -92,11 +107,21 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
     const cFob = parseFormattedNumber(fob);
     if (cFob <= 0) {
       setErrorMessage('O valor FOB (Mercadoria) deve ser superior a zero.');
+      showToast({
+        type: 'error',
+        title: 'Validação',
+        message: 'O valor FOB (Mercadoria) deve ser superior a zero.'
+      });
       return;
     }
 
     if (!isUnlocked) {
       setErrorMessage('O módulo de importação requer um plano compatível ou desbloqueio de créditos.');
+      showToast({
+        type: 'warning',
+        title: 'Módulo Bloqueado',
+        message: 'O módulo de importação requer um plano compatível ou desbloqueio de créditos.'
+      });
       onOpenPlans();
       return;
     }
@@ -104,6 +129,11 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
+      showToast({
+        type: 'warning',
+        title: 'Limite Atingido',
+        message: simCheck.message
+      });
       setShowExhaustedModal(true);
       return;
     }
@@ -217,6 +247,11 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
       setResults(calcData);
       setShowConfirmModal(false);
       setSuccessMessage('Cálculo de importação e despacho aduaneiro apurado com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Cálculo Aduaneiro Concluído',
+        message: 'Cálculo de importação e despacho aduaneiro apurado com sucesso!'
+      });
 
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -233,6 +268,11 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
     } catch (err) {
       console.error(err);
       setErrorMessage('Falha ao calcular importação.');
+      showToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Falha ao calcular importação.'
+      });
     } finally {
       setIsCalculating(false);
     }

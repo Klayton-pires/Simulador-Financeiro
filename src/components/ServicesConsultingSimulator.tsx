@@ -27,6 +27,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { showToast } from '../context/NotificationContext';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { canUserSimulate } from '../utils/accessControl';
 import { ConfirmSimulationModal, SimulationSummaryItem } from './ConfirmSimulationModal';
@@ -97,6 +98,13 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   const [countryVersion, setCountryVersion] = useState<number>(0);
   const country = getEffectiveCountryFiscal(countryCode);
@@ -200,6 +208,11 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
 
     if (baseLabor <= 0) {
       setErrorMessage('Por favor introduza o valor dos honorários de serviço (Ex: 150.000 Kz).');
+      showToast({
+        type: 'error',
+        title: 'Validação',
+        message: 'Por favor introduza o valor dos honorários de serviço (Ex: 150.000 Kz).'
+      });
       return;
     }
 
@@ -207,6 +220,11 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
+      showToast({
+        type: 'warning',
+        title: 'Limite Atingido',
+        message: simCheck.message
+      });
       setShowExhaustedModal(true);
       return;
     }
@@ -229,6 +247,11 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
       }
       setHasCalculated(true);
       setShowConfirmModal(false);
+      showToast({
+        type: 'success',
+        title: 'Honorários Calculados',
+        message: 'Orçamento e honorários de consultoria apurados com sucesso!'
+      });
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);

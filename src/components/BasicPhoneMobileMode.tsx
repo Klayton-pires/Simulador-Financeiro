@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Smartphone, Calculator, RotateCcw, Check, Sparkles, AlertCircle, ArrowDownRight, TrendingUp, ShieldCheck } from 'lucide-react';
 import { UserSafe } from '../types';
 import { COUNTRIES_DB, getEffectiveCountryFiscal, getAvailableCountryList } from '../data/countries';
@@ -7,6 +7,7 @@ import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
 import { NumericInput } from './common/NumericInput';
 import { parseFormattedNumber } from '../utils/numberFormat';
+import { showToast } from '../context/NotificationContext';
 
 interface BasicPhoneMobileModeProps {
   user: UserSafe | null;
@@ -30,6 +31,13 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
   const [hasCalculated, setHasCalculated] = useState<boolean>(false);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   // Calculated snapshot state (only updated on click)
   const [calculatedState, setCalculatedState] = useState<{
@@ -79,11 +87,21 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
 
     if (cost <= 0) {
       setErrorMessage('Por favor introduza um Preço de Custo válido superior a zero.');
+      showToast({
+        type: 'error',
+        title: 'Validação',
+        message: 'Por favor introduza um Preço de Custo válido superior a zero.'
+      });
       return;
     }
 
     if (margin < 0 || margin >= 100) {
       setErrorMessage('A Margem de Lucro deve ser entre 0% e 99%.');
+      showToast({
+        type: 'error',
+        title: 'Validação',
+        message: 'A Margem de Lucro deve ser entre 0% e 99%.'
+      });
       return;
     }
 
@@ -91,6 +109,11 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
+      showToast({
+        type: 'warning',
+        title: 'Limite Atingido',
+        message: simCheck.message
+      });
       setShowExhaustedModal(true);
       return;
     }
@@ -160,9 +183,19 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
       });
 
       setHasCalculated(true);
+      showToast({
+        type: 'success',
+        title: 'Cálculo Concluído',
+        message: 'Preço de venda e margem calculados com sucesso!'
+      });
     } catch (err) {
       console.error(err);
       setErrorMessage('Ocorreu um erro ao processar o cálculo.');
+      showToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Ocorreu um erro ao processar o cálculo.'
+      });
     } finally {
       setIsCalculating(false);
     }

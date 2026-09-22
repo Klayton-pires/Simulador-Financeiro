@@ -305,8 +305,32 @@ router.get('/sql-schema', (req: Request, res: Response) => {
 
       return res.json({
         filename: 'nanucloud_database.sql',
-        tablesCount: 12,
+        schemaVersion: '2.4.0',
+        tablesCount: 20,
+        supportedEngines: ['PostgreSQL 12+', 'MySQL 8+', 'MariaDB 10.5+', 'Cloud SQL', 'SQLite'],
         encryptionAlgorithm: 'Bcrypt (Salt Rounds = 10)',
+        tables: [
+          'plans',
+          'permission_groups',
+          'users',
+          'bank_accounts',
+          'transactions',
+          'manual_payment_validations',
+          'simulations',
+          'support_tickets',
+          'chat_messages',
+          'bot_knowledge',
+          'unresolved_bot_questions',
+          'fiscal_proposals',
+          'fiscal_notifications',
+          'marketing_campaigns',
+          'sms_logs',
+          'audit_logs',
+          'system_settings',
+          'api_keys_and_integrations',
+          'database_engine_configs',
+          'otp_verification_codes'
+        ],
         sqlContent
       });
     } else {

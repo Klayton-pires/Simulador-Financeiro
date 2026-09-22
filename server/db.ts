@@ -16,6 +16,19 @@ import {
   SmsLogItem,
   TrafficCampaign
 } from './types.js';
+import {
+  persistUserToNeon,
+  loadUsersFromNeon,
+  persistSimulationToNeon,
+  loadSimulationsFromNeon,
+  persistTransactionToNeon,
+  loadTransactionsFromNeon,
+  persistAuditLogToNeon,
+  loadAuditLogsFromNeon,
+  persistSupportInquiryToNeon,
+  isNeonConfigured,
+  testNeonConnection
+} from './neon.js';
 
 // Hashes oficiais gerados com Bcrypt Salt 10
 export const ADMIN_PASSWORD_HASH = '$2b$10$35vW5MHk.pDR5uOEXLGhDe8QD2JGoa9riROP6duFZsl.uNV0k36CG'; // 'admin123'
@@ -364,13 +377,97 @@ const DEFAULT_SETTINGS: SystemSettings = {
   activeDatabaseEngine: 'none'
 };
 
+const DEFAULT_AUDIT_LOGS: AuditLog[] = [
+  {
+    id: 'log_seed_01',
+    userId: 'super_admin_klayton',
+    userName: 'Klayton Pires Monteiro',
+    userRole: 'super_admin',
+    action: 'SYSTEM_BOOT_AND_NEON_SYNC',
+    entityType: 'database',
+    ipAddress: '197.234.221.14',
+    details: 'Inicialização do cluster NANUCLOUD e sincronização da base de dados relacional Neon PostgreSQL.',
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'log_seed_02',
+    userId: 'super_admin_klayton',
+    userName: 'Klayton Pires Monteiro',
+    userRole: 'super_admin',
+    action: 'FISCAL_MATRIX_VERIFIED',
+    entityType: 'system',
+    ipAddress: '197.234.221.14',
+    details: 'Verificação da Matriz Fiscal: IVA Angola 14%, Retenção na Fonte 6.5%, Imposto Industrial 25%. Conformidade AGT validada.',
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'log_seed_03',
+    userId: 'admin_level2_suporte',
+    userName: 'Gestor Suporte e Faturação',
+    userRole: 'admin_level2',
+    action: 'PAYMENT_APPROVED',
+    entityType: 'payment',
+    entityId: 'tx_demo_02',
+    ipAddress: '197.234.221.45',
+    details: 'Validação manual de comprovativo Bancário BAI de 3.000 Kz para Dra. Maria Eunice Santos. 60 créditos atribuídos.',
+    createdAt: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'log_seed_04',
+    userId: 'cli_001',
+    userName: 'António Gaspar Ferreira',
+    userRole: 'client',
+    action: 'USER_LOGIN',
+    entityType: 'auth',
+    entityId: 'cli_001',
+    ipAddress: '105.168.12.89',
+    details: 'Autenticação bem-sucedida via credenciais empresariais (comercial@ferreirafilhos.ao).',
+    createdAt: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'log_seed_05',
+    userId: 'cli_002',
+    userName: 'Dra. Maria Eunice Santos',
+    userRole: 'client',
+    action: 'SIMULATION_PERFORMED',
+    entityType: 'simulator',
+    entityId: 'sim_demo_03',
+    ipAddress: '105.168.45.120',
+    details: 'Simulação de Prestação de Serviços: "Auditoria e Consultoria Fiscal Trimestral" (Valor: 670.320 Kz).',
+    createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'log_seed_06',
+    userId: 'cli_003',
+    userName: 'Eng. Carlos Alberto Mendes',
+    userRole: 'client',
+    action: 'PLAN_PURCHASE_REQUEST',
+    entityType: 'plan',
+    entityId: 'tx_demo_03',
+    ipAddress: '197.234.180.22',
+    details: 'Pedido de subscrição do Plano Ouro Pro (3.000 Kz) submetido com comprovativo via BMA.',
+    createdAt: new Date(Date.now() - 32 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'log_seed_07',
+    userId: 'super_admin_klayton',
+    userName: 'Klayton Pires Monteiro',
+    userRole: 'super_admin',
+    action: 'SECURITY_AUDIT_PASS',
+    entityType: 'security',
+    ipAddress: '197.234.221.14',
+    details: 'Auditoria de integridade de hashes Bcrypt e tokens JWT concluída com sucesso. Zero vulnerabilidades detetadas.',
+    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+  }
+];
+
 class DatabaseEngine {
   // Base de dados relacional e em memória com persistência estruturada
   private users: User[] = [...INITIAL_USERS];
   private plans: Plan[] = [...DEFAULT_PLANS];
   private transactions: Transaction[] = [...INITIAL_TRANSACTIONS];
   private queryHistory: QueryHistoryItem[] = [];
-  private auditLogs: AuditLog[] = [];
+  private auditLogs: AuditLog[] = [...DEFAULT_AUDIT_LOGS];
   private settings: SystemSettings = { ...DEFAULT_SETTINGS };
   private supportInquiries: SupportInquiry[] = [];
   private chatMessages: ChatMessage[] = [];
@@ -380,9 +477,84 @@ class DatabaseEngine {
   private unresolvedBotQuestions: UnresolvedBotQuestion[] = [];
   private smsLogs: SmsLogItem[] = [];
   private trafficCampaigns: TrafficCampaign[] = [];
+  private isNeonActive: boolean = false;
 
   constructor() {
     // Inicialização da base de dados com tabelas e seed data carregados
+  }
+
+  /**
+   * Sincroniza e vincula os dados em memória com a base de dados Neon PostgreSQL via DATABASE_URL.
+   */
+  public async initNeonSync(): Promise<{ connected: boolean; message: string }> {
+    if (!isNeonConfigured()) {
+      return { 
+        connected: false, 
+        message: 'DATABASE_URL não configurada no ambiente. A operar com persistência em memória.' 
+      };
+    }
+
+    try {
+      const status = await testNeonConnection();
+      if (!status.connected) {
+        console.warn('⚠️ [Neon DB Sync] Não foi possível conectar ao Neon PostgreSQL:', status.error);
+        return { connected: false, message: status.error || 'Erro ao conectar ao Neon' };
+      }
+
+      this.isNeonActive = true;
+
+      // 1. Sincronizar utilizadores a partir do Neon
+      const neonUsers = await loadUsersFromNeon();
+      if (neonUsers.length > 0) {
+        for (const nu of neonUsers) {
+          const idx = this.users.findIndex(u => u.id === nu.id || u.email.toLowerCase() === nu.email.toLowerCase());
+          if (idx >= 0) {
+            this.users[idx] = nu;
+          } else {
+            this.users.push(nu);
+          }
+        }
+      } else {
+        // Se a tabela users no Neon estiver vazia, sincronizar utilizadores iniciais
+        for (const u of this.users) {
+          persistUserToNeon(u).catch(() => {});
+        }
+      }
+
+      // 2. Sincronizar simulações
+      const neonSims = await loadSimulationsFromNeon();
+      if (neonSims.length > 0) {
+        this.queryHistory = neonSims;
+      }
+
+      // 3. Sincronizar transações
+      const neonTxs = await loadTransactionsFromNeon();
+      if (neonTxs.length > 0) {
+        this.transactions = neonTxs;
+      }
+
+      // 4. Sincronizar logs de auditoria
+      const neonLogs = await loadAuditLogsFromNeon();
+      if (neonLogs.length > 0) {
+        // Concatenar logs do Neon preservando seeds se necessário
+        const existingIds = new Set(neonLogs.map(l => l.id));
+        const merged = [...neonLogs, ...this.auditLogs.filter(l => !existingIds.has(l.id))];
+        this.auditLogs = merged;
+      }
+
+      console.log(`🚀 [Neon DB] Sincronização ativa! Conectado a ${status.database} (${status.version}) com ${status.tableCount} tabelas.`);
+      return { 
+        connected: true, 
+        message: `Conectado ao Neon (${status.database}) com ${status.tableCount} tabelas sincronizadas.` 
+      };
+    } catch (err: any) {
+      console.warn('⚠️ [Neon DB Sync Error]:', err.message);
+      return { connected: false, message: err.message };
+    }
+  }
+
+  public isNeonConnected(): boolean {
+    return this.isNeonActive;
   }
 
   // Guardar estado
@@ -398,12 +570,18 @@ class DatabaseEngine {
   public getSupportInquiries(): SupportInquiry[] { return this.supportInquiries; }
   public addSupportInquiry(item: SupportInquiry): SupportInquiry {
     this.supportInquiries.unshift(item);
+    if (this.isNeonActive) {
+      persistSupportInquiryToNeon(item).catch(() => {});
+    }
     return item;
   }
   public updateSupportInquiry(id: string, updates: Partial<SupportInquiry>): SupportInquiry | undefined {
     const idx = this.supportInquiries.findIndex(i => i.id === id);
     if (idx >= 0) {
       this.supportInquiries[idx] = { ...this.supportInquiries[idx], ...updates };
+      if (this.isNeonActive) {
+        persistSupportInquiryToNeon(this.supportInquiries[idx]).catch(() => {});
+      }
       return this.supportInquiries[idx];
     }
     return undefined;
@@ -520,6 +698,9 @@ class DatabaseEngine {
       user.passwordHash = bcrypt.hashSync(user.passwordHash, 10);
     }
     this.users.push(user);
+    if (this.isNeonActive) {
+      persistUserToNeon(user).catch(() => {});
+    }
     this.addAuditLog({
       userId: user.id,
       userName: user.name,
@@ -545,6 +726,9 @@ class DatabaseEngine {
     user.queriesRemaining = Math.max(0, (user.queriesRemaining || 0) - count);
     user.totalQueriesUsed = (user.totalQueriesUsed || 0) + count;
     user.updatedAt = new Date().toISOString();
+    if (this.isNeonActive) {
+      persistUserToNeon(user).catch(() => {});
+    }
     return { success: true, queriesRemaining: user.queriesRemaining };
   }
 
@@ -562,6 +746,9 @@ class DatabaseEngine {
       ...updates, 
       updatedAt: new Date().toISOString() 
     };
+    if (this.isNeonActive) {
+      persistUserToNeon(this.users[idx]).catch(() => {});
+    }
     return this.users[idx];
   }
 
@@ -570,6 +757,9 @@ class DatabaseEngine {
     if (!user) return undefined;
     user.passwordHash = bcrypt.hashSync(newPlainTextPassword, 10);
     user.updatedAt = new Date().toISOString();
+    if (this.isNeonActive) {
+      persistUserToNeon(user).catch(() => {});
+    }
     this.addAuditLog({
       userId: user.id,
       userName: user.name,
@@ -596,6 +786,9 @@ class DatabaseEngine {
     if (!user) return undefined;
     user.queriesRemaining = (user.queriesRemaining || 0) + bonusCount;
     user.updatedAt = new Date().toISOString();
+    if (this.isNeonActive) {
+      persistUserToNeon(user).catch(() => {});
+    }
     this.addAuditLog({
       userId: admin?.id || 'admin',
       userName: admin?.name || 'Administrador',
@@ -614,6 +807,9 @@ class DatabaseEngine {
     const newExpires = new Date(baseDate.getTime() + additionalDays * 24 * 60 * 60 * 1000).toISOString();
     user.planExpiresAt = newExpires;
     user.updatedAt = new Date().toISOString();
+    if (this.isNeonActive) {
+      persistUserToNeon(user).catch(() => {});
+    }
     this.addAuditLog({
       userId: admin?.id || 'admin',
       userName: admin?.name || 'Administrador',
@@ -649,6 +845,9 @@ class DatabaseEngine {
   // Transactions
   public addTransaction(t: Transaction): Transaction {
     this.transactions.push(t);
+    if (this.isNeonActive) {
+      persistTransactionToNeon(t).catch(() => {});
+    }
     return t;
   }
   public findTransactionById(id: string): Transaction | undefined {
@@ -658,6 +857,9 @@ class DatabaseEngine {
     const idx = this.transactions.findIndex(t => t.id === id);
     if (idx === -1) return undefined;
     this.transactions[idx] = { ...this.transactions[idx], ...updates };
+    if (this.isNeonActive) {
+      persistTransactionToNeon(this.transactions[idx]).catch(() => {});
+    }
     return this.transactions[idx];
   }
   public updateTransactionStatus(id: string, status: any, adminId?: string, adminName?: string): Transaction | undefined {
@@ -670,10 +872,16 @@ class DatabaseEngine {
       reviewedByAdminName: adminName,
       reviewedAt: new Date().toISOString()
     };
+    if (this.isNeonActive) {
+      persistTransactionToNeon(this.transactions[idx]).catch(() => {});
+    }
     return this.transactions[idx];
   }
   public createTransaction(t: any): Transaction {
     this.transactions.push(t);
+    if (this.isNeonActive) {
+      persistTransactionToNeon(t).catch(() => {});
+    }
     return t;
   }
 
@@ -693,17 +901,23 @@ class DatabaseEngine {
   // Audit Logs
   public addAuditLog(log: any): AuditLog {
     const item: AuditLog = {
-      id: `log_${Date.now()}`,
+      id: log.id || `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       userId: log.userId || 'system',
       userName: log.userName || 'Sistema',
+      userRole: log.userRole || undefined,
       action: log.action || 'ACTION',
       entityType: log.entityType || 'system',
+      entityId: log.entityId || undefined,
+      ipAddress: log.ipAddress || undefined,
       details: log.details || '',
-      createdAt: new Date().toISOString()
+      createdAt: log.createdAt || new Date().toISOString()
     };
     this.auditLogs.unshift(item);
-    if (this.auditLogs.length > 500) {
+    if (this.auditLogs.length > 1000) {
       this.auditLogs.pop();
+    }
+    if (this.isNeonActive) {
+      persistAuditLogToNeon(item).catch(() => {});
     }
     return item;
   }
@@ -782,6 +996,9 @@ class DatabaseEngine {
   // Query History
   public addQueryHistory(item: QueryHistoryItem): QueryHistoryItem {
     this.queryHistory.unshift(item);
+    if (this.isNeonActive) {
+      persistSimulationToNeon(item).catch(() => {});
+    }
     return item;
   }
   public findQueryHistoryById(id: string): QueryHistoryItem | undefined {

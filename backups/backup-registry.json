@@ -1,0 +1,54 @@
+[
+  {
+    "id": "backup_20260922_204954_whbp",
+    "timestamp": "2026-09-22T20:49:54.425Z",
+    "formattedDate": "22/09/2026, 20:49:54",
+    "source": "neon_postgresql",
+    "databaseName": "neondb",
+    "tableCounts": {
+      "plans": 5,
+      "users": 5,
+      "simulations": 0,
+      "transactions": 3,
+      "audit_logs": 0,
+      "support_tickets": 0
+    },
+    "totalRecords": 13,
+    "uncompressedBytes": 32414,
+    "sizeFormatted": "31.65 KB",
+    "checksumSha256": "3648bc6a9ceb0948865c69114cb073546599d4bcf278384a4aa5354dfc0323d0",
+    "cloudStatus": "redundant_local_and_cloud",
+    "cloudDestination": "NanuCloud Redundant Cloud Vault (neondb.backup.vault.ao)",
+    "cloudSyncAt": "2026-09-22T20:49:55.633Z",
+    "sqlDumpPath": "/app/applet/backups/backup_20260922_204954_whbp.sql",
+    "jsonDumpPath": "/app/applet/backups/backup_20260922_204954_whbp.json",
+    "triggeredBy": "cli_routine_script",
+    "notes": "Execução da rotina de backup diário via script CLI/Crontab"
+  },
+  {
+    "id": "backup_20260922_204823_c6iq",
+    "timestamp": "2026-09-22T20:48:23.099Z",
+    "formattedDate": "22/09/2026, 20:48:23",
+    "source": "neon_postgresql",
+    "databaseName": "neondb",
+    "tableCounts": {
+      "plans": 5,
+      "users": 5,
+      "simulations": 0,
+      "transactions": 3,
+      "audit_logs": 0,
+      "support_tickets": 0
+    },
+    "totalRecords": 13,
+    "uncompressedBytes": 32414,
+    "sizeFormatted": "31.65 KB",
+    "checksumSha256": "d1f468df79bb43c8ec9869cd01113b9472fccbd608d091d2a0b6d519e89608a8",
+    "cloudStatus": "redundant_local_and_cloud",
+    "cloudDestination": "NanuCloud Redundant Cloud Vault (neondb.backup.vault.ao)",
+    "cloudSyncAt": "2026-09-22T20:48:24.326Z",
+    "sqlDumpPath": "/app/applet/backups/backup_20260922_204823_c6iq.sql",
+    "jsonDumpPath": "/app/applet/backups/backup_20260922_204823_c6iq.json",
+    "triggeredBy": "cli_routine_script",
+    "notes": "Execução da rotina de backup diário via script CLI/Crontab"
+  }
+]

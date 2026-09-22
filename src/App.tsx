@@ -3,6 +3,7 @@ import { UserSafe, SystemSettings } from './types';
 import { SupportedLang } from './i18n/translations';
 import { useI18n } from './i18n/I18nContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { Footer } from './components/Footer';
@@ -22,6 +23,7 @@ import { IntermediaryBrokerSimulator } from './components/IntermediaryBrokerSimu
 import { ApiIntegrationsTab } from './components/ApiIntegrationsTab';
 import { TicketsManagementTab } from './components/TicketsManagementTab';
 import { AdminAdvancedSettingsTab } from './components/admin/AdminAdvancedSettingsTab';
+import { FinancialAnalyticsDashboard } from './components/FinancialAnalyticsDashboard';
 import { LegalTermsModal } from './components/LegalTermsModal';
 import { CornerMenu } from './components/CornerMenu';
 
@@ -144,6 +146,7 @@ function AppContent() {
         onOpenClientProfile={() => setIsClientProfileOpen(true)}
         onOpenAdminDashboard={() => setActiveTab('admin_settings')}
         onOpenPlans={() => setIsPlansOpen(true)}
+        onOpenAnalytics={() => setActiveTab('analytics_dashboard')}
       />
 
       {/* Main Container */}
@@ -286,6 +289,14 @@ function AppContent() {
             <AdminAdvancedSettingsTab currentUser={effectiveUser} />
           )}
 
+          {/* TAB: Dashboard de Análise de Dados Financeiros (Recharts) */}
+          {(activeTab === 'analytics_dashboard' || activeTab === 'history') && (
+            <FinancialAnalyticsDashboard
+              currentUser={effectiveUser}
+              onNavigateToSimulator={(simType) => setActiveTab(simType as ActiveTab)}
+            />
+          )}
+
         </div>
       </main>
 
@@ -370,7 +381,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

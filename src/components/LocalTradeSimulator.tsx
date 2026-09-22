@@ -42,6 +42,7 @@ import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
 import { NumericInput } from './common/NumericInput';
 import { parseFormattedNumber, formatPtNumber } from '../utils/numberFormat';
+import { showToast } from '../context/NotificationContext';
 
 interface LocalTradeSimulatorProps {
   user: UserSafe | null;
@@ -83,6 +84,21 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Auto-dismiss messages after a delay so notifications disappear
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   // Optional Logistics & Acquisition Expenses (Custos Reais de Aquisição - NÃO LUCROS)
   const [showExtrasSection, setShowExtrasSection] = useState<boolean>(false);
@@ -630,6 +646,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setErrorMessage('Existem campos sem preenchimento ou com valores incorretos.');
+      showToast({
+        type: 'error',
+        title: 'Validação',
+        message: 'Existem campos sem preenchimento ou com valores incorretos.'
+      });
       return;
     }
 
@@ -639,6 +660,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
+      showToast({
+        type: 'warning',
+        title: 'Limite Atingido',
+        message: simCheck.message
+      });
       setShowExhaustedModal(true);
       return;
     }
@@ -700,6 +726,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
         } else if (res.status === 402) {
           const data = await res.json();
           setErrorMessage(data.error);
+          showToast({
+            type: 'warning',
+            title: 'Subscrição',
+            message: data.error || 'Saldo de consultas esgotado. Aceda aos Planos.'
+          });
           onOpenPlans();
           setIsCalculating(false);
           return;
@@ -779,6 +810,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
 
       setCalculationResults(scenarios);
       setSuccessMessage('Cálculo e simulação de margens concluídos com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Cálculo Concluído',
+        message: 'Cálculo e simulação de margens concluídos com sucesso!'
+      });
 
       if (user && user.id !== 'visitante_anonimo') {
         onCalculationDone(remaining);
@@ -796,6 +832,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     } catch (err) {
       console.error(err);
       setErrorMessage('Falha ao processar simulação.');
+      showToast({
+        type: 'error',
+        title: 'Erro',
+        message: 'Falha ao processar simulação.'
+      });
     } finally {
       setIsCalculating(false);
     }

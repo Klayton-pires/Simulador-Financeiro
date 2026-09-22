@@ -275,7 +275,7 @@ export interface ManualPaymentValidation {
 export interface QueryHistoryItem {
   id: string;
   userId: string;
-  type: 'local' | 'import' | 'batch' | 'api';
+  type: 'local' | 'services' | 'intermediary' | 'import' | 'batch' | 'api';
   itemType?: 'product' | 'service';
   title: string;
   description: string;
@@ -566,7 +566,21 @@ export interface ChatMessage {
   isRead?: boolean;
 }
 
-export type AuditLog = ConsultingAuditEntry;
+export interface AuditLog {
+  id: string;
+  userId?: string;
+  userName?: string;
+  userRole?: string;
+  action: string;
+  entityType: 'auth' | 'simulator' | 'plan' | 'payment' | 'user' | 'system' | 'support' | 'chat' | 'security' | 'database' | 'marketing' | string;
+  entityId?: string;
+  ipAddress?: string;
+  details: string;
+  createdAt: string;
+  operationType?: string;
+  operatorName?: string;
+  timestamp?: string;
+}
 
 export interface FiscalProposal {
   id: string;

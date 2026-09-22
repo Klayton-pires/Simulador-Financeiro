@@ -1,0 +1,18 @@
+[
+  {
+    "id": "whk_1790110445225_449ak",
+    "userId": "default_system",
+    "name": "ERP Primavera Loja Central",
+    "url": "https://httpbin.org/post",
+    "secret": "whsec_test_demo_12345678",
+    "isActive": true,
+    "events": [
+      "simulation.completed"
+    ],
+    "customHeaders": {},
+    "createdAt": "2026-09-22T20:54:05.225Z",
+    "updatedAt": "2026-09-22T20:54:05.225Z",
+    "totalDeliveries": 0,
+    "successfulDeliveries": 0
+  }
+]

@@ -552,11 +552,90 @@ router.post('/users/:id/validate-plan', requireAdminLevel2, (req: AuthRequest, r
 });
 
 // =========================================================================
-// 6. AUDITORIA & LOGS DO SISTEMA (Nível 1 - Super Admin)
+// 6. AUDITORIA & LOGS DO SISTEMA (Nível 1 & Nível 2)
 // =========================================================================
-router.get('/logs', requireAdminLevel1, (req: AuthRequest, res: Response) => {
-  const logs = db.getAuditLogs();
-  return res.json({ logs });
+router.get('/logs', requireAdminLevel2, (req: AuthRequest, res: Response) => {
+  const { search, entityType, action, role, startDate, endDate, limit = '300' } = req.query;
+  let logs = db.getAuditLogs();
+
+  if (search && typeof search === 'string' && search.trim()) {
+    const term = search.toLowerCase().trim();
+    logs = logs.filter(l => 
+      (l.details && l.details.toLowerCase().includes(term)) ||
+      (l.userName && l.userName.toLowerCase().includes(term)) ||
+      (l.action && l.action.toLowerCase().includes(term)) ||
+      (l.entityId && l.entityId.toLowerCase().includes(term)) ||
+      (l.ipAddress && l.ipAddress.toLowerCase().includes(term))
+    );
+  }
+
+  if (entityType && typeof entityType === 'string' && entityType !== 'all') {
+    logs = logs.filter(l => l.entityType === entityType);
+  }
+
+  if (action && typeof action === 'string' && action !== 'all') {
+    logs = logs.filter(l => l.action === action);
+  }
+
+  if (role && typeof role === 'string' && role !== 'all') {
+    logs = logs.filter(l => l.userRole === role);
+  }
+
+  if (startDate && typeof startDate === 'string') {
+    const startMs = new Date(startDate).getTime();
+    if (!isNaN(startMs)) {
+      logs = logs.filter(l => new Date(l.createdAt).getTime() >= startMs);
+    }
+  }
+
+  if (endDate && typeof endDate === 'string') {
+    const endMs = new Date(endDate).getTime();
+    if (!isNaN(endMs)) {
+      logs = logs.filter(l => new Date(l.createdAt).getTime() <= endMs);
+    }
+  }
+
+  const parsedLimit = Math.min(1000, Math.max(10, parseInt(limit as string, 10) || 300));
+  const totalCount = logs.length;
+  const paginatedLogs = logs.slice(0, parsedLimit);
+
+  const allLogs = db.getAuditLogs();
+  const entityTypes = Array.from(new Set(allLogs.map(l => l.entityType))).filter(Boolean);
+  const actions = Array.from(new Set(allLogs.map(l => l.action))).filter(Boolean);
+  const roles = Array.from(new Set(allLogs.map(l => l.userRole))).filter(Boolean);
+
+  return res.json({
+    logs: paginatedLogs,
+    totalCount,
+    availableEntityTypes: entityTypes,
+    availableActions: actions,
+    availableRoles: roles
+  });
+});
+
+router.post('/logs', requireAdminLevel2, (req: AuthRequest, res: Response) => {
+  try {
+    const admin = req.user!;
+    const { action, entityType, details, entityId } = req.body;
+    if (!action || !details) {
+      return res.status(400).json({ error: 'Os campos "action" e "details" são obrigatórios.' });
+    }
+
+    const log = db.addAuditLog({
+      userId: admin.id,
+      userName: admin.name,
+      userRole: admin.role,
+      action: action.trim().toUpperCase(),
+      entityType: entityType || 'system',
+      entityId,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      details: details.trim()
+    });
+
+    return res.json({ success: true, message: 'Registo de auditoria adicionado à trilha com sucesso.', log });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao registar log de auditoria.' });
+  }
 });
 
 // =========================================================================
@@ -1042,6 +1121,119 @@ router.delete('/simulation-history', (_req: AuthRequest, res: Response) => {
     message: 'Histórico gerido localmente na sessão do navegador.',
     countRemoved: 0
   });
+});
+
+// =========================================================================
+// 21. NEON POSTGRESQL INTEGRATION & HEALTH CHECK
+// =========================================================================
+router.get('/neon-status', async (_req: AuthRequest, res: Response) => {
+  try {
+    const { testNeonConnection } = await import('../neon.js');
+    const status = await testNeonConnection();
+    return res.json(status);
+  } catch (err: any) {
+    return res.status(500).json({
+      connected: false,
+      configured: false,
+      error: err.message || 'Erro ao verificar ligação ao Neon.'
+    });
+  }
+});
+
+router.post('/test-neon', async (req: AuthRequest, res: Response) => {
+  try {
+    const { testNeonConnection } = await import('../neon.js');
+    const { connectionString } = req.body || {};
+    const status = await testNeonConnection(connectionString);
+    return res.json(status);
+  } catch (err: any) {
+    return res.status(500).json({
+      connected: false,
+      configured: false,
+      error: err.message || 'Erro ao testar Neon DB.'
+    });
+  }
+});
+
+router.post('/migrate-neon', async (req: AuthRequest, res: Response) => {
+  try {
+    const { applySqlSchemaToNeon } = await import('../neon.js');
+    const { connectionString } = req.body || {};
+    const result = await applySqlSchemaToNeon(connectionString);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({
+      success: false,
+      error: err.message || 'Falha ao aplicar esquema SQL no Neon DB.'
+    });
+  }
+});
+
+// =========================================================================
+// 22. ROTINA DE BACKUP DIÁRIO NEON POSTGRESQL & REDUNDÂNCIA CLOUD
+// =========================================================================
+router.get('/backups', requireAdminLevel2, async (_req: AuthRequest, res: Response) => {
+  try {
+    const { getBackupHistory, getBackupScheduleStatus } = await import('../backupService.js');
+    const backups = getBackupHistory();
+    const schedule = getBackupScheduleStatus();
+    return res.json({
+      backups,
+      schedule,
+      totalCount: backups.length
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao carregar histórico de backups.' });
+  }
+});
+
+router.post('/backups/run', requireAdminLevel2, async (req: AuthRequest, res: Response) => {
+  try {
+    const admin = req.user!;
+    const { notes } = req.body || {};
+    const { executeBackupRoutine } = await import('../backupService.js');
+    const snapshot = await executeBackupRoutine(`manual_admin_${admin.id}`, notes || `Disparado manualmente pelo administrador ${admin.name}`);
+    return res.json({
+      success: true,
+      message: 'Rotina de backup diário executada e sincronizada com armazenamento redundante em nuvem!',
+      snapshot
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Erro ao executar rotina de backup.' });
+  }
+});
+
+router.put('/backups/schedule', requireAdminLevel1, async (req: AuthRequest, res: Response) => {
+  try {
+    const { updateBackupSchedule } = await import('../backupService.js');
+    const updated = updateBackupSchedule(req.body);
+    return res.json({
+      success: true,
+      message: 'Configuração da rotina diária de backup atualizada com sucesso.',
+      schedule: updated
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao atualizar configuração de backup.' });
+  }
+});
+
+router.get('/backups/:id/download', requireAdminLevel2, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const format = (req.query.format === 'json' ? 'json' : 'sql') as 'sql' | 'json';
+    const { getBackupFileContent } = await import('../backupService.js');
+    const fileData = getBackupFileContent(id, format);
+
+    if (!fileData) {
+      return res.status(404).json({ error: 'Ficheiro de backup não encontrado ou expirado pela política de retenção.' });
+    }
+
+    res.setHeader('Content-Type', fileData.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileData.filename}"`);
+    return res.send(fileData.content);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao transferir ficheiro de backup.' });
+  }
 });
 
 export default router;

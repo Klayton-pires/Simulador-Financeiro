@@ -124,6 +124,9 @@ export const CornerMenu: React.FC<CornerMenuProps> = ({
   }, [isOpen]);
 
   const allModules: CornerMenuItem[] = [
+    // Análise Financeira & Gráficos
+    { id: 'analytics_dashboard', label: 'Dashboard de Análise Financeira', category: 'Inteligência & Análise', icon: BarChart3, unlocked: true },
+
     // Simuladores & Motor
     { id: 'local', label: 'Vendas & Comércio (PVP)', category: 'Simuladores', icon: Store, unlocked: true },
     { id: 'services_consulting', label: 'Prestação de Serviços', category: 'Simuladores', icon: Briefcase, unlocked: true },

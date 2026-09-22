@@ -125,7 +125,7 @@ export interface Transaction {
 export interface QueryHistoryItem {
   id: string;
   userId: string;
-  type: 'local' | 'import' | 'batch';
+  type: 'local' | 'services' | 'intermediary' | 'import' | 'batch' | 'api';
   itemType?: 'product' | 'service';
   title: string;
   description: string;

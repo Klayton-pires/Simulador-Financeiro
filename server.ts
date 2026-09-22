@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
@@ -9,10 +12,20 @@ import chatRoutes from './server/routes/chatRoutes.js';
 import aiTranslateRoutes from './server/routes/aiTranslateRoutes.js';
 import authRoutes from './server/routes/authRoutes.js';
 import { authenticateUser } from './server/auth.js';
+import { db } from './server/db.js';
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Inicializar sincronização com Neon PostgreSQL se DATABASE_URL estiver configurada
+  await db.initNeonSync().catch((err: any) => {
+    console.warn('⚠️ [Neon Startup Warning]:', err.message);
+  });
+
+  // Inicializar motor de backups diários e redundância cloud
+  const { initBackupScheduler } = await import('./server/backupService.js');
+  initBackupScheduler();
 
   // Middlewares
   app.use(express.json({ limit: '10mb' }));
@@ -21,12 +34,34 @@ async function startServer() {
   app.use(authenticateUser);
 
   // Health check
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', async (_req, res) => {
+    const hasNeon = !!(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL);
+    let neonConnected = false;
+    let neonLatencyMs: number | undefined;
+
+    if (hasNeon) {
+      try {
+        const { testNeonConnection } = await import('./server/neon.js');
+        const neonStatus = await testNeonConnection();
+        neonConnected = neonStatus.connected;
+        neonLatencyMs = neonStatus.latencyMs;
+      } catch {
+        neonConnected = false;
+      }
+    }
+
     res.json({ 
       status: 'ok', 
-      database: 'connected_with_sql_schema', 
+      hostingReady: true,
+      neonConfigured: hasNeon,
+      neonConnected,
+      neonLatencyMs,
+      database: hasNeon ? (neonConnected ? 'neon_postgresql_connected' : 'neon_configured_connecting') : 'ready_for_neon_database_url', 
+      tablesSupported: 20,
+      schemaVersion: '2.4.0',
       encryption: 'bcrypt_salt_10',
       auth: 'jwt_and_bcrypt', 
+      nodeEnv: process.env.NODE_ENV || 'development',
       time: new Date().toISOString() 
     });
   });
@@ -79,7 +114,8 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Nanucloud Simulator Server running on http://0.0.0.0:${PORT} (Database: None, Auth: None)`);
+    const dbStatus = db.isNeonConnected() ? 'Neon PostgreSQL (Active)' : 'Fallback In-Memory';
+    console.log(`🚀 Nanucloud Server running on http://0.0.0.0:${PORT} (Database: ${dbStatus}, Auth: Bcrypt Salt 10 + JWT)`);
   });
 }
 

@@ -15,10 +15,12 @@ import {
   Server,
   RefreshCw,
   Terminal,
-  ExternalLink
+  ExternalLink,
+  Webhook
 } from 'lucide-react';
 import { UserSafe, ApiIntegrationConfig } from '../types';
 import { INITIAL_API_CONFIGS } from '../data/mockDatabase';
+import { WebhookManagementSection } from './webhooks/WebhookManagementSection';
 
 interface ApiIntegrationsTabProps {
   user: UserSafe | null;
@@ -32,7 +34,7 @@ export const ApiIntegrationsTab: React.FC<ApiIntegrationsTabProps> = ({
   onOpenAuth
 }) => {
   const [selectedSystem, setSelectedSystem] = useState<string>('PHC');
-  const [activeSubTab, setActiveSubTab] = useState<'config' | 'guide' | 'excel' | 'test'>('config');
+  const [activeSubTab, setActiveSubTab] = useState<'config' | 'guide' | 'excel' | 'test' | 'webhooks'>('config');
   const [copiedKey, setCopiedKey] = useState<boolean>(false);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
   const [generatedKey, setGeneratedKey] = useState<string>(() =>
@@ -315,7 +317,8 @@ export const ApiIntegrationsTab: React.FC<ApiIntegrationsTabProps> = ({
           { id: 'config', label: '1. Seletor de ERP & Campos Recomendados', icon: Layers },
           { id: 'guide', label: '2. Guia & Manual da API', icon: BookOpen },
           { id: 'excel', label: '3. Integração Passo a Passo no Excel', icon: FileSpreadsheet },
-          { id: 'test', label: '4. Simulador de Requisição (Console)', icon: Terminal }
+          { id: 'test', label: '4. Simulador de Requisição (Console)', icon: Terminal },
+          { id: 'webhooks', label: '5. Webhooks em Tempo Real', icon: Webhook }
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -696,6 +699,11 @@ export const ApiIntegrationsTab: React.FC<ApiIntegrationsTabProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB 5: Webhooks de Simulação em Tempo Real */}
+      {activeSubTab === 'webhooks' && (
+        <WebhookManagementSection user={user} />
       )}
         </>
       )}

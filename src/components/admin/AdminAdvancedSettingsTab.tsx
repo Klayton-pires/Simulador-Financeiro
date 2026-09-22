@@ -21,7 +21,8 @@ import { PaymentMethodsSection } from './PaymentMethodsSection';
 import { ManualFiscalMatrixTab } from '../ManualFiscalMatrixTab';
 import { TicketsManagementTab } from '../TicketsManagementTab';
 import { DatabaseSqlManagementSection } from './DatabaseSqlManagementSection';
-import { Database } from 'lucide-react';
+import { AuditLogsManagementSection } from './AuditLogsManagementSection';
+import { Database, FileText } from 'lucide-react';
 
 export type AdminSettingsSection =
   | 'pending_payments'
@@ -30,6 +31,7 @@ export type AdminSettingsSection =
   | 'tickets'
   | 'payments'
   | 'database_sql'
+  | 'audit_logs'
   | 'fiscal_matrix'
   | 'users';
 
@@ -116,6 +118,12 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
       desc: 'Esquema SQL e criptografia Bcrypt'
     },
     {
+      id: 'audit_logs',
+      label: 'Logs de Auditoria',
+      icon: <FileText className="w-4 h-4 text-emerald-400" />,
+      desc: 'Trilha de auditoria e conformidade'
+    },
+    {
       id: 'fiscal_matrix',
       label: 'Configuração de Taxas',
       icon: <Table className="w-4 h-4" />,
@@ -165,7 +173,7 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
       </div>
 
       {/* Navigation Sub-tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 bg-slate-900/60 p-2 rounded-2xl border border-slate-800">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2 bg-slate-900/60 p-2 rounded-2xl border border-slate-800">
         {navItems.map((item) => {
           const isActive = activeSection === item.id;
           return (
@@ -234,6 +242,13 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
 
         {activeSection === 'database_sql' && (
           <DatabaseSqlManagementSection />
+        )}
+
+        {activeSection === 'audit_logs' && (
+          <AuditLogsManagementSection
+            currentUser={currentUser}
+            showSaveNotice={showSaveNotice}
+          />
         )}
 
         {activeSection === 'fiscal_matrix' && (

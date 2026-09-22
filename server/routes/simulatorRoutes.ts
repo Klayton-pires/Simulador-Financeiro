@@ -1,6 +1,15 @@
 import { Router, Request, Response } from 'express';
 import * as XLSX from 'xlsx';
 import { db } from '../db.js';
+import {
+  getWebhooksForUser,
+  saveWebhookConfig,
+  deleteWebhook,
+  sendWebhookNotification,
+  getDeliveryLogs,
+  triggerSimulationCompletedWebhooks,
+  WebhookConfig
+} from '../webhookService.js';
 
 const router = Router();
 
@@ -223,6 +232,20 @@ router.post('/calculate-local', (req: Request, res: Response) => {
       userQueriesRemaining = creditResult.queriesRemaining;
     }
 
+    // Disparar Webhooks cadastrados para notificação automática em sistemas externos
+    triggerSimulationCompletedWebhooks(userId, {
+      simulationType: 'local_commerce_and_services',
+      productName: productName || 'Artigo / Serviço Simulado',
+      costNet: cCostNet,
+      marginPct: cMargin,
+      vatRate: cVatRate,
+      pvpFinal: calcDetails.pvpFinal,
+      netProfit: calcDetails.netProfit,
+      currency: countryCode === 'PT' ? 'EUR' : 'AOA',
+      calculation: calcDetails,
+      timestamp: new Date().toISOString()
+    });
+
     return res.json({
       success: true,
       calculation: calcDetails,
@@ -402,16 +425,62 @@ router.post('/calculate-batch', (req: Request, res: Response) => {
 });
 
 // 4. HISTÓRICO
-router.get('/history', (_req: Request, res: Response) => {
-  return res.json({ history: [] });
+router.get('/history', (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || (req.query.userId as string);
+  const allHistory = db.getQueryHistory();
+  if (userId) {
+    const userHistory = allHistory.filter(item => item.userId === userId);
+    return res.json({ history: userHistory });
+  }
+  return res.json({ history: allHistory });
 });
 
-router.put('/history/:id', (_req: Request, res: Response) => {
-  return res.json({ message: 'OK' });
+router.post('/history', (req: Request, res: Response) => {
+  try {
+    const item = req.body;
+    if (!item.title || !item.costBase) {
+      return res.status(400).json({ error: 'Título e valor de custo são obrigatórios.' });
+    }
+    const fullItem = {
+      id: item.id || `sim_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      userId: item.userId || (req as any).user?.id || 'visitante_anonimo',
+      type: item.type || 'local',
+      itemType: item.itemType || 'product',
+      title: item.title,
+      description: item.description || '',
+      countryCode: item.countryCode || 'AO',
+      costBase: parseFloat(item.costBase || '0'),
+      vatRate: parseFloat(item.vatRate || '14'),
+      marginApplied: parseFloat(item.marginApplied || '0'),
+      finalPrice: parseFloat(item.finalPrice || '0'),
+      netProfit: parseFloat(item.netProfit || '0'),
+      retentionRate: item.retentionRate ? parseFloat(item.retentionRate) : undefined,
+      retentionAmount: item.retentionAmount ? parseFloat(item.retentionAmount) : undefined,
+      netReceived: item.netReceived ? parseFloat(item.netReceived) : undefined,
+      currency: item.currency || 'AOA',
+      details: item.details || {},
+      createdAt: new Date().toISOString()
+    };
+    const saved = db.addQueryHistory(fullItem);
+    return res.json({ success: true, item: saved });
+  } catch (err: any) {
+    console.error('Error on save history:', err);
+    return res.status(500).json({ error: 'Erro ao guardar simulação.' });
+  }
 });
 
-router.delete('/history/:id', (_req: Request, res: Response) => {
-  return res.json({ message: 'Removido com sucesso' });
+router.put('/history/:id', (req: Request, res: Response) => {
+  const updated = db.updateQueryHistory(req.params.id, req.body);
+  if (!updated) {
+    return res.status(404).json({ error: 'Simulação não encontrada.' });
+  }
+  return res.json({ success: true, item: updated });
+});
+
+router.delete('/history/:id', (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || '';
+  const deleted = db.deleteQueryHistory(req.params.id, userId);
+  return res.json({ success: deleted, message: deleted ? 'Removido com sucesso' : 'Não encontrado' });
 });
 
 router.get('/history-export', (_req: Request, res: Response) => {
@@ -422,6 +491,110 @@ router.get('/history-export', (_req: Request, res: Response) => {
   res.setHeader('Content-Disposition', 'attachment; filename=Historico_Simulacoes.xlsx');
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   return res.send(buffer);
+});
+
+// ============================================================================
+// 7. WEBHOOKS CONFIGURATION & AUTOMATED NOTIFICATIONS DISPATCH
+// ============================================================================
+
+router.get('/webhooks', (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || (req.query.userId as string) || 'default_system';
+  const webhooks = getWebhooksForUser(userId);
+  return res.json({ webhooks });
+});
+
+router.post('/webhooks', (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || req.body.userId || 'default_system';
+  const { id, name, url, secret, isActive, events, customHeaders } = req.body;
+
+  if (!url || !url.trim().startsWith('http')) {
+    return res.status(400).json({ error: 'URL do webhook é obrigatória e deve iniciar por http:// ou https://' });
+  }
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Nome de identificação do webhook é obrigatório.' });
+  }
+
+  const saved = saveWebhookConfig(userId, {
+    id,
+    name,
+    url,
+    secret,
+    isActive: isActive !== undefined ? isActive : true,
+    events: events || ['simulation.completed'],
+    customHeaders
+  });
+
+  return res.json({
+    success: true,
+    message: 'Webhook gravado e ativado com sucesso!',
+    webhook: saved
+  });
+});
+
+router.delete('/webhooks/:id', (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  const deleted = deleteWebhook(req.params.id, userId);
+  return res.json({ success: deleted, message: deleted ? 'Webhook removido.' : 'Webhook não encontrado.' });
+});
+
+router.post('/webhooks/test', async (req: Request, res: Response) => {
+  try {
+    const { url, secret, name, events, customHeaders } = req.body;
+
+    if (!url || !url.trim().startsWith('http')) {
+      return res.status(400).json({ error: 'URL válida é obrigatória para o teste.' });
+    }
+
+    const testWebhookConfig: WebhookConfig = {
+      id: 'whk_test_temporary',
+      userId: 'test_user',
+      name: name || 'Endpoint de Teste',
+      url: url.trim(),
+      secret: secret || 'whsec_test_secret_key_123',
+      isActive: true,
+      events: events || ['simulation.completed'],
+      customHeaders,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const mockSimulationData = {
+      simulationId: `sim_test_${Date.now()}`,
+      simulationType: 'local_commerce_and_services',
+      productName: 'Servidor Dell PowerEdge R750 (Simulação de Teste)',
+      itemType: 'product',
+      costNet: 2450000.00,
+      marginPct: 22.0,
+      vatRate: 14.0,
+      pvpFinal: 3407810.00,
+      vatSale: 418460.00,
+      netProfit: 539000.00,
+      currency: 'AOA',
+      country: 'Angola',
+      calculatedAt: new Date().toISOString(),
+      triggeredBy: 'manual_webhook_test_console'
+    };
+
+    const log = await sendWebhookNotification(
+      testWebhookConfig,
+      'simulation.completed',
+      mockSimulationData
+    );
+
+    return res.json({
+      success: log.status === 'success',
+      log
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao despachar teste de webhook: ' + err.message });
+  }
+});
+
+router.get('/webhooks/logs', (req: Request, res: Response) => {
+  const webhookId = req.query.webhookId as string | undefined;
+  const logs = getDeliveryLogs(webhookId);
+  return res.json({ logs });
 });
 
 export default router;

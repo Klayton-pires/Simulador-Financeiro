@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { UserSafe } from '../types';
 import { COUNTRIES_DB, getEffectiveCountryFiscal, getAvailableCountryList } from '../data/countries';
@@ -29,6 +29,7 @@ import { isStaffOrAdmin, canUserSimulate } from '../utils/accessControl';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
+import { showToast } from '../context/NotificationContext';
 import { parseFormattedNumber } from '../utils/numberFormat';
 
 interface ExcelBatchSimulatorProps {
@@ -73,6 +74,27 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  useEffect(() => {
+    if (warningMessage) {
+      const timer = setTimeout(() => setWarningMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [warningMessage]);
 
   const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'superadmin' || user?.role === 'admin_level1' || user?.role === 'admin';
   const availableCountries = getAvailableCountryList(isSuperAdmin);
@@ -171,10 +193,22 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
         setSelectedCostColumn(autoCostCol);
         setSelectedNameColumn(autoNameCol);
 
-        setSuccessMessage(`Ficheiro carregado com sucesso: ${rawJson.length} linhas e ${cols.length} colunas detetadas.`);
+        const loadMsg = `Ficheiro carregado com sucesso: ${rawJson.length} linhas e ${cols.length} colunas detetadas.`;
+        setSuccessMessage(loadMsg);
+        showToast({
+          type: 'success',
+          title: 'Excel Importado',
+          message: loadMsg
+        });
       } catch (err) {
         console.error(err);
-        setErrorMessage('Erro ao ler a estrutura do ficheiro Excel. Verifique se o formato é .xlsx ou .csv válido.');
+        const readErrMsg = 'Erro ao ler a estrutura do ficheiro Excel. Verifique se o formato é .xlsx ou .csv válido.';
+        setErrorMessage(readErrMsg);
+        showToast({
+          type: 'error',
+          title: 'Erro de Leitura',
+          message: readErrMsg
+        });
       } finally {
         setIsProcessing(false);
       }
@@ -185,24 +219,31 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
 
   const handleExecuteBatchCalculation = async () => {
     if (!rawRows || rawRows.length === 0) {
-      setErrorMessage('Por favor, carregue um ficheiro Excel primeiro.');
+      const msg = 'Por favor, carregue um ficheiro Excel primeiro.';
+      setErrorMessage(msg);
+      showToast({ type: 'warning', title: 'Ficheiro Necessário', message: msg });
       return;
     }
 
     const margin = parseFormattedNumber(marginPct);
     if (isNaN(margin) || margin < 0) {
-      setErrorMessage('Por favor, defina uma Margem Global (%) válida antes de calcular.');
+      const msg = 'Por favor, defina uma Margem Global (%) válida antes de calcular.';
+      setErrorMessage(msg);
+      showToast({ type: 'warning', title: 'Margem Inválida', message: msg });
       return;
     }
 
     if (!selectedCostColumn) {
-      setErrorMessage('Por favor, selecione a coluna correspondente ao Preço de Custo.');
+      const msg = 'Por favor, selecione a coluna correspondente ao Preço de Custo.';
+      setErrorMessage(msg);
+      showToast({ type: 'warning', title: 'Coluna Obrigatória', message: msg });
       return;
     }
 
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
+      showToast({ type: 'warning', title: 'Limite Atingido', message: simCheck.message });
       setShowExhaustedModal(true);
       return;
     }
@@ -228,20 +269,24 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
       const resData = await res.json();
 
       if (!res.ok) {
+        const errorText = resData.error || 'Erro ao processar o cálculo em lote.';
+        setErrorMessage(errorText);
+        showToast({ type: 'error', title: 'Erro de Cálculo', message: errorText });
         if (res.status === 403 || res.status === 402) {
-          setErrorMessage(resData.error);
           setShowExhaustedModal(true);
-        } else {
-          setErrorMessage(resData.error || 'Erro ao processar o cálculo em lote.');
         }
         setIsProcessing(false);
         return;
       }
 
       setProcessedData(resData.processedItems);
-      setSuccessMessage(
-        `Cálculo concluído com sucesso! ${resData.processedItems.length} linhas processadas com as colunas NANUCLOUD aplicadas.`
-      );
+      const okMsg = `Cálculo concluído com sucesso! ${resData.processedItems.length} linhas processadas com as colunas NANUCLOUD aplicadas.`;
+      setSuccessMessage(okMsg);
+      showToast({
+        type: 'success',
+        title: 'Lote Processado',
+        message: `Cálculo concluído com sucesso! ${resData.processedItems.length} artigos apurados.`
+      });
 
       if (user && user.id !== 'visitante_anonimo') {
         onCalculationDone(resData.queriesRemaining);
@@ -253,7 +298,9 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
       }
     } catch (err) {
       console.error(err);
-      setErrorMessage('Ocorreu uma falha de comunicação com o servidor ao calcular o lote.');
+      const errMsg = 'Ocorreu uma falha de comunicação com o servidor ao calcular o lote.';
+      setErrorMessage(errMsg);
+      showToast({ type: 'error', title: 'Erro de Rede', message: errMsg });
     } finally {
       setIsProcessing(false);
     }

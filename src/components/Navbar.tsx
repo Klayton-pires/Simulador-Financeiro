@@ -9,7 +9,8 @@ import {
   Coins,
   Plus,
   LogOut,
-  Building
+  Building,
+  BarChart3
 } from 'lucide-react';
 import { NanuCloudLogo } from './NanuCloudLogo';
 import { useLayoutMode } from '../data/layoutMode';
@@ -25,6 +26,7 @@ interface NavbarProps {
   onOpenClientProfile?: () => void;
   onOpenAdminDashboard?: () => void;
   onOpenPlans?: () => void;
+  onOpenAnalytics?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -36,7 +38,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAdminLogin,
   onOpenClientProfile,
   onOpenAdminDashboard,
-  onOpenPlans
+  onOpenPlans,
+  onOpenAnalytics
 }) => {
   const [layoutMode, setLayoutMode] = useLayoutMode();
   const { currentUser, isClient, isAdmin, logout, transactions } = useAuth();
@@ -213,6 +216,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               </>
             )}
           </button>
+
+          {/* Dashboard Financeiro Button */}
+          {onOpenAnalytics && (
+            <button
+              type="button"
+              onClick={onOpenAnalytics}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 hover:border-indigo-500/40 text-xs font-mono font-bold transition cursor-pointer shadow-sm"
+              title="Abrir Dashboard de Análise Financeira (Volume de Vendas e Simulações)"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden md:inline">Dashboard</span>
+            </button>
+          )}
 
           {/* Language Selector */}
           <select

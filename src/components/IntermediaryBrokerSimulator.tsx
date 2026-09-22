@@ -23,6 +23,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { showToast } from '../context/NotificationContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { canUserSimulate } from '../utils/accessControl';
@@ -86,6 +87,20 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   const [countryVersion, setCountryVersion] = useState<number>(0);
   const country = getEffectiveCountryFiscal(countryCode);
@@ -287,6 +302,11 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setErrorMessage('Por favor, verifique os campos assinalados com erro.');
+      showToast({
+        type: 'error',
+        title: 'Validação',
+        message: 'Por favor, verifique os campos assinalados com erro.'
+      });
       return;
     }
 
@@ -295,6 +315,11 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
+      showToast({
+        type: 'warning',
+        title: 'Limite Atingido',
+        message: simCheck.message
+      });
       setShowExhaustedModal(true);
       return;
     }
@@ -310,6 +335,11 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
       setResults(calc);
       setShowConfirmModal(false);
       setSuccessMessage('Simulação de intermediação apurada com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Comissão Calculada',
+        message: 'Simulação de intermediação apurada com sucesso!'
+      });
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
