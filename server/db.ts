@@ -19,6 +19,7 @@ import {
 import {
   persistUserToNeon,
   loadUsersFromNeon,
+  deleteUserFromNeon,
   persistSimulationToNeon,
   loadSimulationsFromNeon,
   persistTransactionToNeon,
@@ -54,159 +55,10 @@ const INITIAL_USERS: User[] = [
     isApiUnlocked: true,
     twoFactorEnabled: false,
     createdAt: new Date().toISOString()
-  },
-  {
-    id: 'cli_001',
-    name: 'António Gaspar Ferreira',
-    company: 'Ferreira & Filhos Comércio Geral Lda',
-    nif: '5412093847',
-    email: 'comercial@ferreirafilhos.ao',
-    phone: '+244 923 456 789',
-    country: 'Angola',
-    passwordHash: CLIENT_PASSWORD_HASH,
-    role: 'client',
-    clientCategory: 'comercio',
-    isActive: true,
-    queriesRemaining: 184,
-    totalQueriesUsed: 116,
-    activePlanId: 'plan_gold',
-    activePlanName: 'Plano Ouro Pro',
-    isImportUnlocked: true,
-    isBatchUnlocked: true,
-    isApiUnlocked: false,
-    twoFactorEnabled: false,
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'cli_002',
-    name: 'Dra. Maria Eunice Santos',
-    company: 'Santos & Associados Consultoria',
-    nif: '5409281742',
-    email: 'maria.santos@santosconsultoria.co.ao',
-    phone: '+244 945 112 233',
-    country: 'Angola',
-    passwordHash: CLIENT_PASSWORD_HASH,
-    role: 'client',
-    clientCategory: 'servicos',
-    isActive: true,
-    queriesRemaining: 742,
-    totalQueriesUsed: 258,
-    activePlanId: 'plan_diamond',
-    activePlanName: 'Plano Diamante Enterprise',
-    isImportUnlocked: true,
-    isBatchUnlocked: true,
-    isApiUnlocked: true,
-    twoFactorEnabled: false,
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'cli_003',
-    name: 'Eng. Carlos Alberto Mendes',
-    company: 'Mendes Import & Export Transitários',
-    nif: '5418829103',
-    email: 'carlos.mendes@mendesimport.ao',
-    phone: '+244 912 887 766',
-    country: 'Angola',
-    passwordHash: CLIENT_PASSWORD_HASH,
-    role: 'client',
-    clientCategory: 'importacao',
-    isActive: true,
-    queriesRemaining: 45,
-    totalQueriesUsed: 255,
-    activePlanId: 'plan_gold',
-    activePlanName: 'Plano Ouro Pro',
-    isImportUnlocked: true,
-    isBatchUnlocked: true,
-    isApiUnlocked: false,
-    twoFactorEnabled: false,
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'cli_004',
-    name: 'Teresa Cristina Neto',
-    company: 'Boutique & Cosméticos Luanda',
-    nif: '5420194831',
-    email: 'loja@boutiqueluanda.com',
-    phone: '+244 933 654 321',
-    country: 'Angola',
-    passwordHash: CLIENT_PASSWORD_HASH,
-    role: 'client',
-    clientCategory: 'comercio',
-    isActive: true,
-    queriesRemaining: 8,
-    totalQueriesUsed: 42,
-    activePlanId: 'plan_bronze',
-    activePlanName: 'Plano Bronze',
-    isImportUnlocked: false,
-    isBatchUnlocked: false,
-    isApiUnlocked: false,
-    twoFactorEnabled: false,
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
   }
 ];
 
-const INITIAL_TRANSACTIONS: Transaction[] = [
-  {
-    id: 'tx_pay_001',
-    userId: 'cli_001',
-    userName: 'António Gaspar Ferreira',
-    userEmail: 'comercial@ferreirafilhos.ao',
-    companyName: 'Ferreira & Filhos Comércio Geral Lda',
-    nif: '5412093847',
-    planId: 'plan_gold',
-    planName: 'Plano Ouro Pro (60 Consultas)',
-    amountKz: 3000,
-    queriesGranted: 60,
-    validityDays: 30,
-    paymentMethod: 'bank_transfer',
-    paymentReference: 'BAI-COMP-2026-9921',
-    paymentProofName: 'Comprovativo_BAI_3000Kz.pdf',
-    notes: 'Transferência efetuada via BAI Directo para a conta NANUCLOUD.',
-    status: 'pending',
-    createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'tx_pay_002',
-    userId: 'cli_002',
-    userName: 'Dra. Maria Eunice Santos',
-    userEmail: 'maria.santos@santosconsultoria.co.ao',
-    companyName: 'Santos & Associados Consultoria',
-    nif: '5409281742',
-    planId: 'plan_platinum',
-    planName: 'Plano Platina Business (100 Consultas)',
-    amountKz: 5000,
-    queriesGranted: 100,
-    validityDays: 30,
-    paymentMethod: 'express_ref',
-    paymentReference: 'MCX-REF-89421893',
-    paymentProofName: 'Talao_Multicaixa_Express_5000Kz.jpg',
-    notes: 'Pagamento efetuado no ATM Multicaixa Express.',
-    status: 'pending',
-    createdAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'tx_pay_003',
-    userId: 'cli_003',
-    userName: 'Eng. Carlos Alberto Mendes',
-    userEmail: 'carlos.mendes@mendesimport.ao',
-    companyName: 'Mendes Import & Export Transitários',
-    nif: '5418829103',
-    planId: 'plan_silver',
-    planName: 'Plano Prata (30 Consultas)',
-    amountKz: 1500,
-    queriesGranted: 30,
-    validityDays: 30,
-    paymentMethod: 'bank_transfer',
-    paymentReference: 'BFA-TRANSF-110293',
-    paymentProofName: 'Talao_BFA_1500Kz.pdf',
-    notes: 'Transferência interbancária validada.',
-    status: 'approved',
-    reviewedByAdminId: 'usr_admin_nanucloud',
-    reviewedByAdminName: 'Super Administrador NANUCLOUD',
-    reviewedAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-    createdAt: new Date(Date.now() - 36 * 3600 * 1000).toISOString()
-  }
-];
+const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 const DEFAULT_BOT_KNOWLEDGE: BotKnowledgeItem[] = [
   {
@@ -380,82 +232,34 @@ const DEFAULT_SETTINGS: SystemSettings = {
 const DEFAULT_AUDIT_LOGS: AuditLog[] = [
   {
     id: 'log_seed_01',
-    userId: 'super_admin_klayton',
-    userName: 'Klayton Pires Monteiro',
+    userId: 'usr_admin_nanucloud',
+    userName: 'Super Administrador NANUCLOUD',
     userRole: 'super_admin',
     action: 'SYSTEM_BOOT_AND_NEON_SYNC',
     entityType: 'database',
-    ipAddress: '197.234.221.14',
-    details: 'Inicialização do cluster NANUCLOUD e sincronização da base de dados relacional Neon PostgreSQL.',
+    ipAddress: '127.0.0.1',
+    details: 'Inicialização do cluster NANUCLOUD e sincronização ativa com base de dados relacional Neon PostgreSQL.',
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
   },
   {
     id: 'log_seed_02',
-    userId: 'super_admin_klayton',
-    userName: 'Klayton Pires Monteiro',
+    userId: 'usr_admin_nanucloud',
+    userName: 'Super Administrador NANUCLOUD',
     userRole: 'super_admin',
     action: 'FISCAL_MATRIX_VERIFIED',
     entityType: 'system',
-    ipAddress: '197.234.221.14',
+    ipAddress: '127.0.0.1',
     details: 'Verificação da Matriz Fiscal: IVA Angola 14%, Retenção na Fonte 6.5%, Imposto Industrial 25%. Conformidade AGT validada.',
     createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
   },
   {
-    id: 'log_seed_03',
-    userId: 'admin_level2_suporte',
-    userName: 'Gestor Suporte e Faturação',
-    userRole: 'admin_level2',
-    action: 'PAYMENT_APPROVED',
-    entityType: 'payment',
-    entityId: 'tx_demo_02',
-    ipAddress: '197.234.221.45',
-    details: 'Validação manual de comprovativo Bancário BAI de 3.000 Kz para Dra. Maria Eunice Santos. 60 créditos atribuídos.',
-    createdAt: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'log_seed_04',
-    userId: 'cli_001',
-    userName: 'António Gaspar Ferreira',
-    userRole: 'client',
-    action: 'USER_LOGIN',
-    entityType: 'auth',
-    entityId: 'cli_001',
-    ipAddress: '105.168.12.89',
-    details: 'Autenticação bem-sucedida via credenciais empresariais (comercial@ferreirafilhos.ao).',
-    createdAt: new Date(Date.now() - 22 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'log_seed_05',
-    userId: 'cli_002',
-    userName: 'Dra. Maria Eunice Santos',
-    userRole: 'client',
-    action: 'SIMULATION_PERFORMED',
-    entityType: 'simulator',
-    entityId: 'sim_demo_03',
-    ipAddress: '105.168.45.120',
-    details: 'Simulação de Prestação de Serviços: "Auditoria e Consultoria Fiscal Trimestral" (Valor: 670.320 Kz).',
-    createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'log_seed_06',
-    userId: 'cli_003',
-    userName: 'Eng. Carlos Alberto Mendes',
-    userRole: 'client',
-    action: 'PLAN_PURCHASE_REQUEST',
-    entityType: 'plan',
-    entityId: 'tx_demo_03',
-    ipAddress: '197.234.180.22',
-    details: 'Pedido de subscrição do Plano Ouro Pro (3.000 Kz) submetido com comprovativo via BMA.',
-    createdAt: new Date(Date.now() - 32 * 60 * 60 * 1000).toISOString()
-  },
-  {
     id: 'log_seed_07',
-    userId: 'super_admin_klayton',
-    userName: 'Klayton Pires Monteiro',
+    userId: 'usr_admin_nanucloud',
+    userName: 'Super Administrador NANUCLOUD',
     userRole: 'super_admin',
     action: 'SECURITY_AUDIT_PASS',
     entityType: 'security',
-    ipAddress: '197.234.221.14',
+    ipAddress: '127.0.0.1',
     details: 'Auditoria de integridade de hashes Bcrypt e tokens JWT concluída com sucesso. Zero vulnerabilidades detetadas.',
     createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
   }
@@ -477,6 +281,7 @@ class DatabaseEngine {
   private unresolvedBotQuestions: UnresolvedBotQuestion[] = [];
   private smsLogs: SmsLogItem[] = [];
   private trafficCampaigns: TrafficCampaign[] = [];
+  private otpCodes: Array<{ id: string; identifier: string; type: string; code: string; expiresAt: string; used: boolean }> = [];
   private isNeonActive: boolean = false;
 
   constructor() {
@@ -506,16 +311,15 @@ class DatabaseEngine {
       // 1. Sincronizar utilizadores a partir do Neon
       const neonUsers = await loadUsersFromNeon();
       if (neonUsers.length > 0) {
-        for (const nu of neonUsers) {
-          const idx = this.users.findIndex(u => u.id === nu.id || u.email.toLowerCase() === nu.email.toLowerCase());
-          if (idx >= 0) {
-            this.users[idx] = nu;
-          } else {
-            this.users.push(nu);
-          }
+        // Carregar diretamente os utilizadores reais persistidos na base de dados Neon
+        this.users = neonUsers;
+        // Garantir que a conta Super Admin principal está ativa e registada
+        if (!this.users.some(u => u.email.toLowerCase() === 'admin@nanucloud.com' || u.role === 'super_admin')) {
+          this.users.unshift(INITIAL_USERS[0]);
+          persistUserToNeon(INITIAL_USERS[0]).catch(() => {});
         }
       } else {
-        // Se a tabela users no Neon estiver vazia, sincronizar utilizadores iniciais
+        // Se a tabela users no Neon estiver vazia, sincronizar utilizador super admin inicial
         for (const u of this.users) {
           persistUserToNeon(u).catch(() => {});
         }
@@ -781,6 +585,104 @@ class DatabaseEngine {
     }
   }
 
+  public async createPasswordResetOtp(identifier: string): Promise<string> {
+    const cleanIdentifier = identifier.trim().toLowerCase();
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const id = `otp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    
+    // Invalidar códigos antigos não utilizados para este identificador
+    this.otpCodes.forEach(item => {
+      if (item.identifier.toLowerCase() === cleanIdentifier && item.type === 'password_reset') {
+        item.used = true;
+      }
+    });
+
+    const newOtp = {
+      id,
+      identifier: cleanIdentifier,
+      type: 'password_reset',
+      code,
+      expiresAt,
+      used: false
+    };
+    this.otpCodes.push(newOtp);
+
+    if (this.isNeonActive) {
+      try {
+        const { queryNeon } = await import('./neon.js');
+        await queryNeon(
+          `INSERT INTO otp_verification_codes (id, identifier, type, code, expires_at, used)
+           VALUES ($1, $2, 'password_reset', $3, $4, FALSE);`,
+          [id, cleanIdentifier, code, expiresAt]
+        );
+      } catch (err: any) {
+        console.warn('⚠️ [OTP Neon insert warning]:', err.message);
+      }
+    }
+
+    this.addSmsLog({
+      phoneNumber: cleanIdentifier.includes('@') ? '+244 954 269 353' : cleanIdentifier,
+      messageType: 'password_reset',
+      messageContent: `[NANUCLOUD] Código de reposição de palavra-passe: ${code}. Válido por 15 minutos. Não partilhe com terceiros.`,
+      status: 'delivered'
+    });
+
+    return code;
+  }
+
+  public async verifyAndConsumePasswordResetOtp(identifier: string, code: string): Promise<boolean> {
+    const cleanIdentifier = identifier.trim().toLowerCase();
+    const cleanCode = code.trim();
+
+    // 1. Verificar memória
+    const memoryIdx = this.otpCodes.findIndex(
+      o => o.identifier.toLowerCase() === cleanIdentifier &&
+           o.type === 'password_reset' &&
+           o.code === cleanCode &&
+           !o.used &&
+           new Date(o.expiresAt).getTime() > Date.now()
+    );
+
+    if (memoryIdx >= 0) {
+      this.otpCodes[memoryIdx].used = true;
+      if (this.isNeonActive) {
+        try {
+          const { queryNeon } = await import('./neon.js');
+          await queryNeon(
+            `UPDATE otp_verification_codes SET used = TRUE WHERE id = $1;`,
+            [this.otpCodes[memoryIdx].id]
+          );
+        } catch {}
+      }
+      return true;
+    }
+
+    // 2. Verificar base de dados Neon PostgreSQL
+    if (this.isNeonActive) {
+      try {
+        const { queryNeon } = await import('./neon.js');
+        const res = await queryNeon(
+          `SELECT id, expires_at FROM otp_verification_codes 
+           WHERE identifier = $1 AND code = $2 AND type = 'password_reset' AND used = FALSE 
+           ORDER BY created_at DESC LIMIT 1;`,
+          [cleanIdentifier, cleanCode]
+        );
+        if (res && res.rows && res.rows.length > 0) {
+          const row = res.rows[0];
+          if (new Date(row.expires_at).getTime() > Date.now()) {
+            await queryNeon(`UPDATE otp_verification_codes SET used = TRUE WHERE id = $1;`, [row.id]);
+            return true;
+          }
+        }
+      } catch (err: any) {
+        console.warn('⚠️ [Neon OTP check warning]:', err.message);
+      }
+    }
+
+    return false;
+  }
+
   public grantBonusQueries(userId: string, bonusCount: number, reason: string, admin: any): User | undefined {
     const user = this.findUserById(userId);
     if (!user) return undefined;
@@ -824,6 +726,9 @@ class DatabaseEngine {
   public deleteUser(id: string): boolean {
     const prevLen = this.users.length;
     this.users = this.users.filter(u => u.id !== id);
+    if (this.isNeonActive) {
+      deleteUserFromNeon(id).catch((err) => console.warn(`Erro ao apagar ${id} no Neon:`, err));
+    }
     return this.users.length !== prevLen;
   }
 

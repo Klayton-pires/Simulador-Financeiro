@@ -47,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const pendingPaymentsCount = transactions.filter((t) => t.status === 'pending').length;
 
   return (
-    <header className="h-16 border-b border-slate-800 flex items-center justify-between px-3 sm:px-4 md:px-6 bg-[#1E293B] sticky top-0 z-40">
+    <header className="h-16 border-b border-white/[0.08] flex items-center justify-between px-3 sm:px-4 md:px-6 bg-[#0B101D]/80 backdrop-blur-xl sticky top-0 z-40 transition-colors">
       <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
         {/* Top-Left Menu Trigger & Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -55,12 +55,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onToggleMenu}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-slate-700 hover:border-indigo-500/50 transition cursor-pointer shadow-sm active:scale-95 text-xs font-mono font-bold"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/[0.08] hover:border-indigo-500/40 transition cursor-pointer shadow-sm active:scale-95 text-xs font-medium"
               title="Menu de Módulos (Ctrl + M)"
               aria-label="Abrir Menu de Módulos"
             >
               <Menu className="w-4 h-4 text-indigo-400" />
-              <span className="hidden sm:inline">Menu</span>
+              <span className="hidden sm:inline">Módulos</span>
             </button>
           )}
 
@@ -83,18 +83,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenClientProfile}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/50 text-xs font-mono transition cursor-pointer shadow-sm active:scale-95 group"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-500/30 text-xs transition cursor-pointer shadow-sm active:scale-95 group"
                 title="Abrir Área Reservada do Utilizador (Perfil, Saldo Comprado e Pedidos)"
               >
-                <div className="w-6 h-6 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 shrink-0">
+                <div className="w-6 h-6 rounded-md bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 shrink-0">
                   <User className="w-3.5 h-3.5 text-indigo-300" />
                 </div>
                 <div className="text-left">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-bold text-white group-hover:text-indigo-200">
+                    <span className="text-[11px] font-semibold text-white group-hover:text-indigo-200">
                       Área do Utilizador
                     </span>
-                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
+                    <span className="text-[10px] font-mono font-medium text-amber-400 flex items-center gap-1">
                       <Coins className="w-3 h-3 text-amber-400 inline" />
                       {currentUser.queriesRemaining.toLocaleString('pt-PT')}
                     </span>
@@ -109,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   type="button"
                   onClick={onOpenPlans}
-                  className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold transition cursor-pointer"
+                  className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition cursor-pointer"
                   title="Comprar mais créditos ou alterar plano"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -120,7 +120,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={logout}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-slate-900/80 hover:bg-rose-950/40 hover:text-rose-300 text-slate-400 border border-slate-700/80 text-xs font-mono transition cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-900/60 hover:bg-rose-950/40 hover:text-rose-300 text-slate-400 border border-white/[0.06] text-xs transition cursor-pointer"
                 title="Terminar Sessão em Segurança"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -135,21 +135,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenAdminDashboard}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-500/50 text-xs font-mono font-bold text-cyan-300 transition cursor-pointer shadow-sm active:scale-95 group"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-500/30 text-xs font-medium text-cyan-300 transition cursor-pointer shadow-sm active:scale-95 group"
                 title="Área Reservada dos Gestores (Painel Administrativo & Aprovações)"
               >
                 <Shield className="w-4 h-4 text-cyan-400 group-hover:rotate-6 transition-transform shrink-0" />
                 <div className="text-left">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-white">Área dos Gestores</span>
+                    <span className="text-[11px] text-white font-semibold">Painel Gestão</span>
                     {pendingPaymentsCount > 0 && (
                       <span className="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.2 rounded-full font-bold animate-pulse">
                         {pendingPaymentsCount}
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] text-cyan-400 font-normal hidden sm:block">
-                    Gestão & Finanças
+                  <span className="text-[10px] text-cyan-400/80 font-normal hidden sm:block">
+                    Administração & Finanças
                   </span>
                 </div>
               </button>
@@ -157,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={logout}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-slate-900/80 hover:bg-rose-950/40 hover:text-rose-300 text-slate-400 border border-slate-700/80 text-xs font-mono transition cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-900/60 hover:bg-rose-950/40 hover:text-rose-300 text-slate-400 border border-white/[0.06] text-xs transition cursor-pointer"
                 title="Terminar Sessão Administrativa"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -172,7 +172,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenClientLogin}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-xs font-mono font-bold transition shadow-sm active:scale-95 cursor-pointer border border-indigo-400/30"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition shadow-sm active:scale-95 cursor-pointer border border-indigo-500/40"
                 title="Área Reservada do Utilizador: Iniciar Sessão ou Registar Empresa"
               >
                 <User className="w-3.5 h-3.5 text-indigo-200" />
@@ -182,7 +182,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenAdminLogin}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 text-xs font-mono font-bold transition active:scale-95 cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400 text-xs font-medium transition active:scale-95 cursor-pointer shadow-sm"
                 title="Área Reservada dos Gestores: Painel Administrativo e Aprovações"
               >
                 <Shield className="w-3.5 h-3.5 text-cyan-400" />
@@ -195,24 +195,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Dynamic Layout Mode Switcher (Friendly vs Advanced) */}
           <button
             onClick={() => setLayoutMode(layoutMode === 'friendly' ? 'advanced' : 'friendly')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold transition border cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition border cursor-pointer ${
               layoutMode === 'friendly'
-                ? 'bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border-indigo-500/30 shadow-sm shadow-indigo-500/10'
-                : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/30 shadow-sm shadow-amber-500/10'
+                ? 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
             }`}
             title={`Layout Atual: Modo ${layoutMode === 'friendly' ? 'Amigável' : 'Avançado'}. Clique para alternar.`}
           >
             {layoutMode === 'friendly' ? (
               <>
-                <Zap className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                <span className="hidden sm:inline">Modo</span>
-                <span className="text-indigo-200">Amigável</span>
+                <Zap className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden sm:inline text-slate-400">Modo</span>
+                <span className="text-indigo-200 font-semibold">Amigável</span>
               </>
             ) : (
               <>
                 <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Modo</span>
-                <span className="text-amber-200">Avançado</span>
+                <span className="hidden sm:inline text-slate-400">Modo</span>
+                <span className="text-amber-200 font-semibold">Avançado</span>
               </>
             )}
           </button>
@@ -222,11 +222,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onOpenAnalytics}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 hover:border-indigo-500/40 text-xs font-mono font-bold transition cursor-pointer shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-indigo-300 border border-white/[0.08] hover:border-indigo-500/40 text-xs font-medium transition cursor-pointer shadow-sm"
               title="Abrir Dashboard de Análise Financeira (Volume de Vendas e Simulações)"
             >
               <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden md:inline">Dashboard</span>
+              <span className="hidden md:inline">Analytics</span>
             </button>
           )}
 
@@ -234,7 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <select
             value={currentLang}
             onChange={(e) => onLanguageChange(e.target.value as SupportedLang)}
-            className="bg-[#0F172A] text-slate-200 border border-slate-800 rounded-lg px-2 py-1.5 text-xs font-mono outline-none focus:border-indigo-500 transition cursor-pointer"
+            className="bg-slate-900/90 text-slate-200 border border-white/[0.08] hover:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:border-indigo-500 transition cursor-pointer"
           >
             <option value="pt">🇵🇹 PT</option>
             <option value="en">🇬🇧 EN</option>

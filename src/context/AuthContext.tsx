@@ -225,6 +225,9 @@ interface AuthContextType {
   isAdmin: boolean;
   loginClient: (emailOrId: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   loginAdmin: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  loginSocial: (provider: 'google' | 'facebook', profile: { email: string; name: string; companyName?: string }) => Promise<{ success: boolean; error?: string; isNewUser?: boolean }>;
+  requestPasswordReset: (identifier: string) => Promise<{ success: boolean; message?: string; emailMasked?: string; devOtpPreview?: string; error?: string }>;
+  resetPassword: (identifier: string, code: string, newPassword: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   registerClient: (data: ClientRegistrationData, password?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   consumeCredit: (count?: number) => boolean;
@@ -243,13 +246,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getStoredClients = (): UserSafe[] => {
     const saved = localStorage.getItem('nanucloud_clients_db');
     if (!saved) {
-      localStorage.setItem('nanucloud_clients_db', JSON.stringify(DEMO_CLIENTS));
-      return DEMO_CLIENTS;
+      return [];
     }
     try {
       return JSON.parse(saved);
     } catch {
-      return DEMO_CLIENTS;
+      return [];
     }
   };
 
@@ -269,7 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [transactions, setTransactions] = useState<StoredTransaction[]>(getStoredTransactions);
 
-  // Active user session
+  // Active user session: strictly start null unless a confirmed session exists
   const [currentUser, setCurrentUser] = useState<UserSafe | null>(() => {
     const savedSession = localStorage.getItem('nanucloud_current_user');
     if (savedSession) {
@@ -279,8 +281,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
     }
-    // Default to first demo client so users immediately experience the purchased balance & profile workflow
-    return DEMO_CLIENTS[0];
+    return null;
   });
 
   const saveTransactions = (txList: StoredTransaction[]) => {
@@ -326,12 +327,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // 1. Login Estrito de Cliente (apenas utilizadores ativos e inscritos no banco de dados)
   const loginClient = async (emailOrId: string, password?: string): Promise<{ success: boolean; error?: string }> => {
+    if (!emailOrId?.trim() || !password?.trim()) {
+      return { success: false, error: 'Por favor preencha o seu e-mail/NIF e a palavra-passe.' };
+    }
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: emailOrId, password })
+        body: JSON.stringify({ identifier: emailOrId.trim(), password: password.trim() })
       });
 
       const data = await response.json();
@@ -350,40 +356,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         window.dispatchEvent(new CustomEvent('nanucloud_clients_updated'));
 
         return { success: true };
-      } else if (response.status === 401 || response.status === 400 || response.status === 403) {
-        return { success: false, error: data.error || 'Credenciais inválidas.' };
+      } else {
+        return { success: false, error: data.error || 'Credenciais inválidas ou utilizador inativo na base de dados.' };
       }
     } catch {
-      // Fallback local em caso de perda temporária de rede
+      return { success: false, error: 'Falha de comunicação com o servidor. Verifique a sua ligação.' };
     }
-
-    // Fallback local de contingência
-    const clients = getStoredClients();
-    const query = emailOrId.toLowerCase().trim();
-    const client = clients.find(c => c.id === query || c.email.toLowerCase() === query || c.nif === query);
-    
-    if (!client) {
-      return { success: false, error: 'Utilizador não encontrado com este email ou NIF.' };
-    }
-    if (!client.isActive) {
-      return { success: false, error: 'Esta conta de utilizador encontra-se suspensa. Contacte o suporte.' };
-    }
-
-    const updated = { ...client, lastLoginAt: new Date().toISOString() };
-    setCurrentUser(updated);
-    
-    const allClients = clients.map(c => c.id === client.id ? updated : c);
-    localStorage.setItem('nanucloud_clients_db', JSON.stringify(allClients));
-
-    return { success: true };
   };
 
+  // 2. Login Estrito Administrativo (apenas administradores ativos e inscritos no banco de dados)
   const loginAdmin = async (email: string, password?: string): Promise<{ success: boolean; error?: string }> => {
+    if (!email?.trim() || !password?.trim()) {
+      return { success: false, error: 'O e-mail e a palavra-passe administrativa são obrigatórios.' };
+    }
+
     try {
       const response = await fetch('/api/auth/admin-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: email.trim(), password: password.trim() })
       });
 
       const data = await response.json();
@@ -393,21 +384,109 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setCurrentUser(data.user);
         return { success: true };
-      } else if (response.status === 401 || response.status === 403 || response.status === 400) {
+      } else {
         return { success: false, error: data.error || 'Credenciais administrativas inválidas.' };
       }
     } catch {
-      // Fallback local
+      return { success: false, error: 'Falha ao conectar com o servidor administrativo.' };
     }
+  };
 
-    const cleanEmail = email.trim().toLowerCase();
-    const adminUser = {
-      ...SYSTEM_ADMIN_USER,
-      email: cleanEmail.includes('@') ? cleanEmail : SYSTEM_ADMIN_USER.email,
-      lastLoginAt: new Date().toISOString()
-    };
-    setCurrentUser(adminUser);
-    return { success: true };
+  // 3. Login / Cadastro Rápido com Google ou Facebook
+  const loginSocial = async (
+    provider: 'google' | 'facebook', 
+    profile: { email: string; name: string; companyName?: string }
+  ): Promise<{ success: boolean; error?: string; isNewUser?: boolean }> => {
+    try {
+      const response = await fetch('/api/auth/social-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider,
+          email: profile.email.trim(),
+          name: profile.name.trim(),
+          companyName: profile.companyName?.trim()
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success && data.user) {
+        if (data.token) {
+          localStorage.setItem('nanucloud_jwt_token', data.token);
+        }
+        setCurrentUser(data.user);
+
+        const clients = getStoredClients();
+        const updated = clients.some(c => c.id === data.user.id)
+          ? clients.map(c => c.id === data.user.id ? data.user : c)
+          : [data.user, ...clients];
+        localStorage.setItem('nanucloud_clients_db', JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('nanucloud_clients_updated'));
+
+        return { success: true, isNewUser: data.isNewUser };
+      } else {
+        return { success: false, error: data.error || 'Erro na autenticação social.' };
+      }
+    } catch {
+      return { success: false, error: 'Erro de comunicação ao autenticar com a conta social.' };
+    }
+  };
+
+  // 4. Pedido de Código para Reposição de Palavra-passe
+  const requestPasswordReset = async (
+    identifier: string
+  ): Promise<{ success: boolean; message?: string; emailMasked?: string; devOtpPreview?: string; error?: string }> => {
+    if (!identifier?.trim()) {
+      return { success: false, error: 'Por favor indique o seu e-mail ou NIF.' };
+    }
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: identifier.trim() })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return {
+          success: true,
+          message: data.message,
+          emailMasked: data.emailMasked,
+          devOtpPreview: data.devOtpPreview
+        };
+      }
+      return { success: false, error: data.error || 'Não foi possível gerar o código de reposição.' };
+    } catch {
+      return { success: false, error: 'Falha de comunicação com o servidor.' };
+    }
+  };
+
+  // 5. Redefinição e Conclusão de Reposição de Palavra-passe
+  const resetPassword = async (
+    identifier: string,
+    code: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> => {
+    if (!identifier?.trim() || !code?.trim() || !newPassword?.trim()) {
+      return { success: false, error: 'Preencha o identificador, código de 6 dígitos e a nova senha.' };
+    }
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: identifier.trim(),
+          code: code.trim(),
+          newPassword: newPassword.trim()
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { success: true, message: data.message };
+      }
+      return { success: false, error: data.error || 'Falha ao redefinir a palavra-passe.' };
+    } catch {
+      return { success: false, error: 'Falha de comunicação com o servidor ao redefinir palavra-passe.' };
+    }
   };
 
   const registerClient = async (data: ClientRegistrationData, password?: string): Promise<{ success: boolean; error?: string }> => {

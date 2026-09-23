@@ -330,6 +330,20 @@ router.post('/calculate-import', (req: Request, res: Response) => {
       netProfit
     };
 
+    const userId = (req as any).user?.id || req.body.userId;
+    triggerSimulationCompletedWebhooks(userId, {
+      simulationType: 'customs_import',
+      productName: productName || 'Importação Aduaneira',
+      costNet: nationalizedCostNet,
+      marginPct: cMargin,
+      vatRate: cVatRate,
+      pvpFinal,
+      netProfit,
+      currency: destCountry === 'PT' ? 'EUR' : 'AOA',
+      calculation: calcDetails,
+      timestamp: new Date().toISOString()
+    });
+
     return res.json({
       success: true,
       calculation: calcDetails,
@@ -462,6 +476,22 @@ router.post('/history', (req: Request, res: Response) => {
       createdAt: new Date().toISOString()
     };
     const saved = db.addQueryHistory(fullItem);
+
+    // Disparar Webhooks do utilizador para qualquer simulação finalizada registada
+    triggerSimulationCompletedWebhooks(fullItem.userId, {
+      simulationId: fullItem.id,
+      simulationType: fullItem.type,
+      productName: fullItem.title,
+      costNet: fullItem.costBase,
+      marginPct: fullItem.marginApplied,
+      vatRate: fullItem.vatRate,
+      pvpFinal: fullItem.finalPrice,
+      netProfit: fullItem.netProfit,
+      currency: fullItem.currency,
+      calculation: fullItem.details,
+      timestamp: fullItem.createdAt
+    });
+
     return res.json({ success: true, item: saved });
   } catch (err: any) {
     console.error('Error on save history:', err);

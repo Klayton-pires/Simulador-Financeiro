@@ -45,108 +45,28 @@ export interface ClientRecord {
   lastLoginAt: string | null;
 }
 
-const DEFAULT_CLIENTS: ClientRecord[] = [
-  {
-    id: 'cli_001',
-    name: 'António Gaspar Ferreira',
-    companyName: 'Ferreira & Filhos Comércio Geral Lda',
-    nif: '5412093847',
-    email: 'comercial@ferreirafilhos.ao',
-    phone: '+244 923 456 789',
-    country: 'Angola',
-    category: 'comercio',
-    activePlanId: 'plan_pro',
-    activePlanName: 'Profissional Mensal',
-    queriesRemaining: 184,
-    totalQueriesUsed: 116,
-    isActive: true,
-    isImportUnlocked: true,
-    isBatchUnlocked: true,
-    isApiUnlocked: false,
-    createdAt: '2026-01-15T10:30:00Z',
-    lastLoginAt: '2026-09-17T14:20:00Z'
-  },
-  {
-    id: 'cli_002',
-    name: 'Dra. Maria Eunice Santos',
-    companyName: 'Santos & Associados Consultoria',
-    nif: '5409281742',
-    email: 'maria.santos@santosconsultoria.co.ao',
-    phone: '+244 945 112 233',
-    country: 'Angola',
-    category: 'servicos',
-    activePlanId: 'plan_enterprise',
-    activePlanName: 'Empresarial Anual',
-    queriesRemaining: 742,
-    totalQueriesUsed: 258,
-    isActive: true,
-    isImportUnlocked: true,
-    isBatchUnlocked: true,
-    isApiUnlocked: true,
-    createdAt: '2026-02-01T09:15:00Z',
-    lastLoginAt: '2026-09-18T08:10:00Z'
-  },
-  {
-    id: 'cli_003',
-    name: 'Eng. Carlos Alberto Mendes',
-    companyName: 'Mendes Import & Export Transitários',
-    nif: '5418829103',
-    email: 'carlos.mendes@mendesimport.ao',
-    phone: '+244 912 887 766',
-    country: 'Angola',
-    category: 'importacao',
-    activePlanId: 'plan_pro',
-    activePlanName: 'Profissional Mensal',
-    queriesRemaining: 45,
-    totalQueriesUsed: 255,
-    isActive: true,
-    isImportUnlocked: true,
-    isBatchUnlocked: true,
-    isApiUnlocked: false,
-    createdAt: '2026-03-10T11:00:00Z',
-    lastLoginAt: '2026-09-16T17:45:00Z'
-  },
-  {
-    id: 'cli_004',
-    name: 'Teresa Cristina Neto',
-    companyName: 'Boutique & Cosméticos Luanda',
-    nif: '5420194831',
-    email: 'loja@boutiqueluanda.com',
-    phone: '+244 933 654 321',
-    country: 'Angola',
-    category: 'comercio',
-    activePlanId: 'plan_starter',
-    activePlanName: 'Básico Starter',
-    queriesRemaining: 8,
-    totalQueriesUsed: 42,
-    isActive: false,
-    isImportUnlocked: false,
-    isBatchUnlocked: false,
-    isApiUnlocked: false,
-    createdAt: '2026-04-22T14:40:00Z',
-    lastLoginAt: '2026-08-30T10:05:00Z'
-  },
-  {
-    id: 'cli_005',
-    name: 'João Pedro Valente',
-    companyName: 'Valente Logística e Transportes',
-    nif: '5401928374',
-    email: 'operacoes@valentelog.pt',
-    phone: '+351 912 345 678',
-    country: 'Portugal',
-    category: 'servicos',
-    activePlanId: 'plan_pro',
-    activePlanName: 'Profissional Internacional',
-    queriesRemaining: 120,
-    totalQueriesUsed: 80,
-    isActive: true,
-    isImportUnlocked: true,
-    isBatchUnlocked: true,
-    isApiUnlocked: false,
-    createdAt: '2026-05-05T08:20:00Z',
-    lastLoginAt: '2026-09-15T11:30:00Z'
-  }
-];
+function mapUserToClientRecord(u: any): ClientRecord {
+  return {
+    id: u.id,
+    name: u.name,
+    companyName: u.company || u.name,
+    nif: u.nif || 'Consumidor Final',
+    email: u.email,
+    phone: u.phone || '',
+    country: u.country || 'Angola',
+    category: u.clientCategory || 'comercio',
+    activePlanId: u.activePlanId || 'plan_starter',
+    activePlanName: u.activePlanName || 'Plano Comercial',
+    queriesRemaining: typeof u.queriesRemaining === 'number' ? u.queriesRemaining : 0,
+    totalQueriesUsed: typeof u.totalQueriesUsed === 'number' ? u.totalQueriesUsed : 0,
+    isActive: u.isActive !== false,
+    isImportUnlocked: !!u.isImportUnlocked,
+    isBatchUnlocked: !!u.isBatchUnlocked,
+    isApiUnlocked: !!u.isApiUnlocked,
+    createdAt: u.createdAt || new Date().toISOString(),
+    lastLoginAt: u.lastLoginAt || null
+  };
+}
 
 interface ClientsManagementSectionProps {
   currentUser: UserSafe;
@@ -161,12 +81,16 @@ export const ClientsManagementSection: React.FC<ClientsManagementSectionProps> =
     const saved = localStorage.getItem('nanucloud_clients_db');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
     }
-    return DEFAULT_CLIENTS;
+    return [];
   });
 
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [dbStatus, setDbStatus] = useState<'connected' | 'syncing' | 'error'>('connected');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -192,11 +116,46 @@ export const ClientsManagementSection: React.FC<ClientsManagementSectionProps> =
   const [formUnlockBatch, setFormUnlockBatch] = useState<boolean>(true);
   const [formUnlockApi, setFormUnlockApi] = useState<boolean>(false);
 
-  const persistClients = (updated: ClientRecord[]) => {
-    setClients(updated);
-    localStorage.setItem('nanucloud_clients_db', JSON.stringify(updated));
-    window.dispatchEvent(new CustomEvent('nanucloud_clients_updated'));
+  const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('nanucloud_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
   };
+
+  const loadClientsFromDb = async (showToast = false) => {
+    setIsLoading(true);
+    setDbStatus('syncing');
+    try {
+      const res = await fetch('/api/admin/users?role=client', {
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.users)) {
+          const mapped = data.users.map(mapUserToClientRecord);
+          setClients(mapped);
+          localStorage.setItem('nanucloud_clients_db', JSON.stringify(mapped));
+          setDbStatus('connected');
+          if (showToast) {
+            showSaveNotice(`Base de dados sincronizada: ${mapped.length} clientes carregados do Neon.`);
+          }
+        }
+      } else {
+        setDbStatus('error');
+      }
+    } catch (err) {
+      console.error('Falha ao comunicar com o banco de dados:', err);
+      setDbStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadClientsFromDb();
+  }, []);
 
   const handleOpenCreate = () => {
     setFormName('');
@@ -232,7 +191,7 @@ export const ClientsManagementSection: React.FC<ClientsManagementSectionProps> =
     setFormUnlockApi(client.isApiUnlocked);
   };
 
-  const handleSaveClient = (e: React.FormEvent) => {
+  const handleSaveClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formCompanyName.trim() || !formEmail.trim()) {
       alert('Nome da Empresa e Email são obrigatórios.');
@@ -246,101 +205,204 @@ export const ClientsManagementSection: React.FC<ClientsManagementSectionProps> =
       plan_enterprise: 'Empresarial Anual'
     };
 
-    if (editingClient) {
-      const updated = clients.map((c) => {
-        if (c.id === editingClient.id) {
-          return {
-            ...c,
-            name: formName.trim() || formCompanyName.trim(),
-            companyName: formCompanyName.trim(),
-            nif: formNif.trim(),
-            email: formEmail.trim(),
-            phone: formPhone.trim(),
-            country: formCountry,
-            category: formCategory,
-            activePlanId: formPlan,
-            activePlanName: planNames[formPlan] || 'Plano Personalizado',
-            queriesRemaining: Number(formQueries) || 0,
-            isActive: formIsActive,
-            isImportUnlocked: formUnlockImport,
-            isBatchUnlocked: formUnlockBatch,
-            isApiUnlocked: formUnlockApi
-          };
+    setIsSaving(true);
+
+    try {
+      if (editingClient) {
+        // Atualizar no banco de dados Neon
+        const payload = {
+          name: formName.trim() || formCompanyName.trim(),
+          companyName: formCompanyName.trim(),
+          company: formCompanyName.trim(),
+          nif: formNif.trim(),
+          email: formEmail.trim(),
+          phone: formPhone.trim(),
+          country: formCountry,
+          clientCategory: formCategory,
+          category: formCategory,
+          activePlanId: formPlan,
+          activePlanName: planNames[formPlan] || 'Plano Personalizado',
+          queriesRemaining: Number(formQueries) || 0,
+          isActive: formIsActive,
+          isImportUnlocked: formUnlockImport,
+          isBatchUnlocked: formUnlockBatch,
+          isApiUnlocked: formUnlockApi
+        };
+
+        const res = await fetch(`/api/admin/users/${editingClient.id}`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Erro ao atualizar cliente no banco de dados.');
         }
-        return c;
+
+        const data = await res.json();
+        const updatedRecord = data.user ? mapUserToClientRecord(data.user) : {
+          ...editingClient,
+          ...payload
+        };
+
+        const updatedList = clients.map(c => c.id === editingClient.id ? updatedRecord : c);
+        setClients(updatedList);
+        localStorage.setItem('nanucloud_clients_db', JSON.stringify(updatedList));
+        setEditingClient(null);
+        showSaveNotice(`Cliente "${formCompanyName}" sincronizado no Neon PostgreSQL com sucesso!`);
+      } else {
+        // Criar novo cliente no banco de dados Neon
+        const payload = {
+          name: formName.trim() || formCompanyName.trim(),
+          companyName: formCompanyName.trim(),
+          company: formCompanyName.trim(),
+          nif: formNif.trim() || 'Consumidor Final',
+          email: formEmail.trim(),
+          phone: formPhone.trim() || '+244 923 000 000',
+          country: formCountry,
+          role: 'client',
+          clientCategory: formCategory,
+          category: formCategory,
+          activePlanId: formPlan,
+          activePlanName: planNames[formPlan] || 'Plano Personalizado',
+          queriesRemaining: Number(formQueries) || 100,
+          isActive: formIsActive,
+          isImportUnlocked: formUnlockImport,
+          isBatchUnlocked: formUnlockBatch,
+          isApiUnlocked: formUnlockApi
+        };
+
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Erro ao criar cliente no banco de dados.');
+        }
+
+        const data = await res.json();
+        const newRecord = data.user ? mapUserToClientRecord(data.user) : {
+          ...payload,
+          id: `cli_${Date.now()}`,
+          totalQueriesUsed: 0,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: null
+        };
+
+        const updatedList = [newRecord, ...clients];
+        setClients(updatedList);
+        localStorage.setItem('nanucloud_clients_db', JSON.stringify(updatedList));
+        setIsCreateModalOpen(false);
+        showSaveNotice(`Novo cliente "${formCompanyName}" gravado no Neon PostgreSQL com sucesso!`);
+      }
+    } catch (err: any) {
+      alert(`Falha na operação: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleToggleBlock = async (client: ClientRecord) => {
+    try {
+      const nextStatus = !client.isActive;
+      const res = await fetch(`/api/admin/users/${client.id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isActive: nextStatus })
       });
-      persistClients(updated);
-      setEditingClient(null);
-      showSaveNotice(`Cliente "${formCompanyName}" atualizado com sucesso!`);
-    } else {
-      const newClient: ClientRecord = {
-        id: `cli_${Date.now()}`,
-        name: formName.trim() || formCompanyName.trim(),
-        companyName: formCompanyName.trim(),
-        nif: formNif.trim() || 'Consumidor Final',
-        email: formEmail.trim(),
-        phone: formPhone.trim(),
-        country: formCountry,
-        category: formCategory,
-        activePlanId: formPlan,
-        activePlanName: planNames[formPlan] || 'Plano Personalizado',
-        queriesRemaining: Number(formQueries) || 100,
-        totalQueriesUsed: 0,
-        isActive: formIsActive,
-        isImportUnlocked: formUnlockImport,
-        isBatchUnlocked: formUnlockBatch,
-        isApiUnlocked: formUnlockApi,
-        createdAt: new Date().toISOString(),
-        lastLoginAt: null
-      };
-      persistClients([newClient, ...clients]);
-      setIsCreateModalOpen(false);
-      showSaveNotice(`Novo cliente "${newClient.companyName}" cadastrado com sucesso!`);
+
+      if (!res.ok) {
+        throw new Error('Falha ao atualizar estado no banco de dados.');
+      }
+
+      const updatedList = clients.map((c) => (c.id === client.id ? { ...c, isActive: nextStatus } : c));
+      setClients(updatedList);
+      localStorage.setItem('nanucloud_clients_db', JSON.stringify(updatedList));
+      showSaveNotice(
+        nextStatus
+          ? `Cliente "${client.companyName}" reativado na base de dados Neon!`
+          : `Cliente "${client.companyName}" suspenso no sistema.`
+      );
+    } catch (err: any) {
+      alert(`Erro ao alterar estado do cliente: ${err.message}`);
     }
   };
 
-  const handleToggleBlock = (client: ClientRecord) => {
-    const updated = clients.map((c) => (c.id === client.id ? { ...c, isActive: !c.isActive } : c));
-    persistClients(updated);
-    showSaveNotice(
-      client.isActive
-        ? `Cliente "${client.companyName}" suspenso temporariamente.`
-        : `Cliente "${client.companyName}" reativado com sucesso!`
-    );
-  };
+  const handleDeleteClient = async (client: ClientRecord) => {
+    if (!window.confirm(`Tem a certeza que deseja eliminar permanentemente o cliente "${client.companyName}" do banco de dados Neon? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
 
-  const handleDeleteClient = (client: ClientRecord) => {
-    if (window.confirm(`Tem a certeza que deseja eliminar o cliente "${client.companyName}"? Esta ação não pode ser desfeita.`)) {
-      const updated = clients.filter((c) => c.id !== client.id);
-      persistClients(updated);
-      showSaveNotice(`Cliente "${client.companyName}" eliminado.`);
+    try {
+      const res = await fetch(`/api/admin/users/${client.id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Falha ao eliminar do banco de dados.');
+      }
+
+      const updatedList = clients.filter((c) => c.id !== client.id);
+      setClients(updatedList);
+      localStorage.setItem('nanucloud_clients_db', JSON.stringify(updatedList));
+      showSaveNotice(`Cliente "${client.companyName}" eliminado permanentemente da base de dados.`);
+    } catch (err: any) {
+      alert(`Erro ao eliminar cliente: ${err.message}`);
     }
   };
 
-  const handleAddCreditsSubmit = (e: React.FormEvent) => {
+  const handleAddCreditsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!creditModalClient) return;
 
     const amount = Number(creditsToAdd) || 0;
     if (amount === 0) return;
 
-    const updated = clients.map((c) => {
-      if (c.id === creditModalClient.id) {
-        return {
-          ...c,
-          queriesRemaining: Math.max(0, c.queriesRemaining + amount)
-        };
-      }
-      return c;
-    });
+    try {
+      const res = await fetch(`/api/admin/users/${creditModalClient.id}/credits`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          amount,
+          reason: `Adição manual de ${amount} créditos pela Gestão de Clientes`
+        })
+      });
 
-    persistClients(updated);
-    showSaveNotice(
-      amount > 0
-        ? `Creditadas +${amount} consultas ao cliente ${creditModalClient.companyName}.`
-        : `Deduzidas ${Math.abs(amount)} consultas do cliente ${creditModalClient.companyName}.`
-    );
-    setCreditModalClient(null);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Falha ao creditar consultas no banco de dados.');
+      }
+
+      const data = await res.json();
+      const newBalance = data.user ? data.user.queriesRemaining : Math.max(0, creditModalClient.queriesRemaining + amount);
+
+      const updatedList = clients.map((c) => {
+        if (c.id === creditModalClient.id) {
+          return {
+            ...c,
+            queriesRemaining: newBalance
+          };
+        }
+        return c;
+      });
+
+      setClients(updatedList);
+      localStorage.setItem('nanucloud_clients_db', JSON.stringify(updatedList));
+      showSaveNotice(
+        amount > 0
+          ? `+${amount} consultas creditadas e gravadas no Neon para ${creditModalClient.companyName}.`
+          : `${amount} consultas deduzidas no Neon para ${creditModalClient.companyName}.`
+      );
+      setCreditModalClient(null);
+    } catch (err: any) {
+      alert(`Erro ao atualizar consultas: ${err.message}`);
+    }
   };
 
   const filteredClients = clients.filter((c) => {
@@ -369,20 +431,42 @@ export const ClientsManagementSection: React.FC<ClientsManagementSectionProps> =
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base font-bold text-slate-100 font-mono flex items-center gap-2">
               <Users className="w-5 h-5 text-cyan-400" /> GESTÃO DE CLIENTES & EMPRESAS
             </h3>
             <span className="text-[10px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded font-mono font-bold">
               Base de Contas Externas
             </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1.5 ${
+              dbStatus === 'connected'
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                : dbStatus === 'syncing'
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse'
+                : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                dbStatus === 'connected' ? 'bg-emerald-400 animate-pulse' : dbStatus === 'syncing' ? 'bg-amber-400' : 'bg-rose-400'
+              }`} />
+              Neon PostgreSQL {dbStatus === 'syncing' ? 'Sincronizando...' : dbStatus === 'connected' ? 'Ativo' : 'Offline'}
+            </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 font-mono">
-            Controlo de subscrições, saldo de consultas, dados fiscais (NIF) e acesso a módulos para clientes.
+            Controlo de subscrições, saldo de consultas, dados fiscais (NIF) e acesso a módulos em sincronização direta com o Neon PostgreSQL.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => loadClientsFromDb(true)}
+            disabled={isLoading}
+            className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-2 px-3 rounded-xl text-xs font-mono flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+            title="Recarregar dados diretamente do Neon PostgreSQL"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
+            <span className="hidden sm:inline">Recarregar Banco</span>
+          </button>
           <button
             type="button"
             onClick={handleOpenCreate}

@@ -47,32 +47,32 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
   );
 
   return (
-    <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 mt-auto">
+    <footer className="bg-[#080C14] border-t border-white/[0.08] text-slate-400 mt-auto">
       {/* Top Details & WhatsApp Bar */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left border-b border-slate-800/80">
-        <div className="flex flex-col sm:flex-row items-center gap-4 flex-wrap">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left border-b border-white/[0.05]">
+        <div className="flex flex-col sm:flex-row items-center gap-3.5 flex-wrap text-xs">
           <div className="flex items-center gap-2">
             <NanuCloudLogo className="h-7" isDarkTheme={true} customLogoUrl={settings?.companyLogoUrl} />
           </div>
-          <span className="hidden sm:inline text-slate-700">|</span>
-          <p className="flex items-center gap-1.5 text-xs text-slate-400">
-            <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span className="hidden sm:inline text-slate-700">·</span>
+          <p className="flex items-center gap-1.5 text-slate-400">
+            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span>{address}</span>
           </p>
-          <span className="hidden sm:inline text-slate-700">|</span>
-          <p className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-            <a href={`mailto:${email}`} className="hover:text-sky-300 transition-colors">{email}</a>
+          <span className="hidden sm:inline text-slate-700">·</span>
+          <p className="flex items-center gap-1.5 text-slate-400">
+            <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <a href={`mailto:${email}`} className="hover:text-slate-200 transition-colors">{email}</a>
           </p>
-          <span className="hidden sm:inline text-slate-700">|</span>
-          <p className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Phone className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <span className="hidden sm:inline text-slate-700">·</span>
+          <p className="flex items-center gap-1.5 text-slate-400">
+            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span>{phonesList.join(' / ')}</span>
           </p>
           {settings?.companyNif && (
             <>
-              <span className="hidden sm:inline text-slate-700">|</span>
-              <p className="text-xs text-slate-400">
+              <span className="hidden sm:inline text-slate-700">·</span>
+              <p className="text-slate-400">
                 <span className="font-semibold text-slate-300">NIF:</span> {settings.companyNif}
               </p>
             </>
@@ -88,10 +88,10 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
               href={`https://wa.me/${waNum.replace(/\D/g, '')}?text=Ola%2C%20preciso%20de%20ajuda%20com%20o%20Simulador%20Nanucloud`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 px-3 py-1 rounded-lg text-xs font-mono transition-colors"
+              className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-white border border-emerald-500/25 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
               title={`Suporte WhatsApp: ${waNum}`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
               <span>{waNum}</span>
             </a>
           ))}
@@ -102,10 +102,10 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
               href={settings.socialFacebook}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700 transition"
+              className="p-1.5 rounded-lg bg-slate-900 hover:bg-indigo-600 text-slate-300 hover:text-white border border-white/[0.08] transition"
               title="Facebook Oficial"
             >
-              <span className="font-bold text-xs px-1">FB</span>
+              <span className="font-semibold text-xs px-1">FB</span>
             </a>
           )}
           {settings?.socialInstagram && (
@@ -113,10 +113,10 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
               href={settings.socialInstagram}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white border border-slate-700 transition"
+              className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-600 text-slate-300 hover:text-white border border-white/[0.08] transition"
               title="Instagram Oficial"
             >
-              <span className="font-bold text-xs px-1">IG</span>
+              <span className="font-semibold text-xs px-1">IG</span>
             </a>
           )}
           {settings?.socialLinkedIn && (
@@ -124,10 +124,10 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
               href={settings.socialLinkedIn}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-sky-600 text-slate-300 hover:text-white border border-slate-700 transition"
+              className="p-1.5 rounded-lg bg-slate-900 hover:bg-sky-600 text-slate-300 hover:text-white border border-white/[0.08] transition"
               title="LinkedIn Oficial"
             >
-              <span className="font-bold text-xs px-1">IN</span>
+              <span className="font-semibold text-xs px-1">IN</span>
             </a>
           )}
           {settings?.socialTwitterX && (
@@ -135,18 +135,18 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
               href={settings.socialTwitterX}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+              className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/[0.08] transition"
               title="X / Twitter Oficial"
             >
-              <span className="font-bold text-xs px-1">X</span>
+              <span className="font-semibold text-xs px-1">X</span>
             </a>
           )}
         </div>
       </div>
 
       {/* Mandatory Accountant Disclaimer Banner */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 border-b border-slate-800/80">
-        <div className="flex items-center justify-center gap-2.5 text-xs text-amber-300 text-center bg-amber-500/10 border border-amber-500/20 py-2.5 px-4 rounded-xl">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 border-b border-white/[0.04]">
+        <div className="flex items-center justify-center gap-2 text-xs text-amber-300/90 text-center bg-amber-500/[0.06] border border-amber-500/20 py-2.5 px-4 rounded-xl">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
           <span>
             <strong>Aviso Legal Nanucloud:</strong> A utilização deste aplicativo tem caráter meramente informativo e estimativo, <strong>não dispensando a consulta de um profissional de contas</strong> ou contabilista certificado.
@@ -154,23 +154,19 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
         </div>
       </div>
 
-      {/* Sleek Console Status Bar */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-slate-500 font-mono">
-        <div className="flex flex-wrap items-center gap-4">
-          <span>
-            API STATUS: <span className="text-emerald-400 font-bold">OPERATIONAL</span>
-          </span>
-          <span>
-            ENCRYPTION: <span className="text-emerald-400 font-bold">AES-256 / BCRYPT</span>
-          </span>
-          <span>
-            SESSION TIMEOUT: <span className="text-slate-400">24H</span>
-          </span>
-          <span className="hidden md:inline">
-            SYSTEM: <span className="text-emerald-400 font-bold">ONLINE & SECURE</span>
+      {/* Quiet, clean copyright and links footer */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="flex items-center gap-2">
+          <span>&copy; {copyright}</span>
+          <span className="hidden sm:inline">·</span>
+          <span className="hidden sm:inline text-slate-400">Plataforma Empresarial de Simulação Fiscal</span>
+        </div>
+        <div className="flex items-center gap-4 text-slate-400">
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            Sistemas Operacionais
           </span>
         </div>
-        <span>&copy; {copyright}</span>
       </div>
     </footer>
   );

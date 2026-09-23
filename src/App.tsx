@@ -134,23 +134,28 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0F172A] text-slate-200 antialiased selection:bg-indigo-500 selection:text-white font-sans">
-      {/* Top Fixed Header with Client/Admin Auth Buttons & Balance Badge */}
-      <Navbar
-        currentLang={currentLang}
-        onLanguageChange={handleLangChange}
-        onToggleMenu={() => setIsMenuDrawerOpen((prev) => !prev)}
-        onNavigateHome={() => setActiveTab('local')}
-        onOpenClientLogin={handleOpenClientLogin}
-        onOpenAdminLogin={handleOpenAdminLogin}
-        onOpenClientProfile={() => setIsClientProfileOpen(true)}
-        onOpenAdminDashboard={() => setActiveTab('admin_settings')}
-        onOpenPlans={() => setIsPlansOpen(true)}
-        onOpenAnalytics={() => setActiveTab('analytics_dashboard')}
-      />
+    <div className="min-h-screen flex flex-col bg-[#0A0E1A] text-slate-100 antialiased selection:bg-indigo-500/30 selection:text-indigo-200 relative overflow-x-hidden">
+      {/* Subtle Ambient Lighting Effects */}
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(99,102,241,0.12),rgba(0,0,0,0))]"></div>
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_60%_35%_at_90%_25%,rgba(56,189,248,0.06),rgba(0,0,0,0))]"></div>
 
-      {/* Main Container */}
-      <main className={`max-w-7xl mx-auto w-full px-4 md:px-6 py-6 flex-1 flex flex-col ${isSidebarHidden ? '' : 'lg:flex-row'} gap-6 transition-all duration-300`}>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {/* Top Fixed Header with Client/Admin Auth Buttons & Balance Badge */}
+        <Navbar
+          currentLang={currentLang}
+          onLanguageChange={handleLangChange}
+          onToggleMenu={() => setIsMenuDrawerOpen((prev) => !prev)}
+          onNavigateHome={() => setActiveTab('local')}
+          onOpenClientLogin={handleOpenClientLogin}
+          onOpenAdminLogin={handleOpenAdminLogin}
+          onOpenClientProfile={() => setIsClientProfileOpen(true)}
+          onOpenAdminDashboard={() => setActiveTab('admin_settings')}
+          onOpenPlans={() => setIsPlansOpen(true)}
+          onOpenAnalytics={() => setActiveTab('analytics_dashboard')}
+        />
+
+        {/* Main Container */}
+        <main className={`max-w-7xl mx-auto w-full px-4 md:px-6 py-6 flex-1 flex flex-col ${isSidebarHidden ? '' : 'lg:flex-row'} gap-6 transition-all duration-300`}>
         {/* Sidebar Nav */}
         {!isSidebarHidden && (
           <Sidebar
@@ -176,16 +181,16 @@ function AppContent() {
           
           {/* Header Banner when Sidebar is Hidden */}
           {isSidebarHidden && (
-            <div className="mb-4 p-2.5 bg-[#1E293B]/80 border border-slate-800 rounded-xl flex items-center justify-between text-xs font-mono">
-              <div className="flex items-center gap-2 text-indigo-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>MODO ESPAÇO TOTAL ATIVO</span>
-                <span className="text-slate-500 text-[10px] font-normal hidden sm:inline">| Aceda a qualquer módulo pelo menu flutuante no canto inferior direito</span>
+            <div className="mb-4 p-3 glass-panel rounded-2xl flex items-center justify-between text-xs border border-white/[0.08]">
+              <div className="flex items-center gap-2 text-indigo-300 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span>Modo Espaço Total</span>
+                <span className="text-slate-500 text-xs hidden sm:inline">· Aceda aos módulos pelo menu de navegação</span>
               </div>
               <button
                 type="button"
                 onClick={toggleSidebar}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700 transition"
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg text-xs border border-white/[0.08] hover:border-slate-600 transition"
               >
                 Restaurar Menu Lateral
               </button>
@@ -374,6 +379,7 @@ function AppContent() {
         onOpenAdminLogin={handleOpenAdminLogin}
         onOpenClientProfile={() => setIsClientProfileOpen(true)}
       />
+      </div>
     </div>
   );
 }

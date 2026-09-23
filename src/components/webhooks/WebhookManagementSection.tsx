@@ -310,22 +310,22 @@ export const WebhookManagementSection: React.FC<WebhookManagementSectionProps> =
   return (
     <div className="space-y-6">
       {/* Top Banner & Control Bar */}
-      <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="glass-panel border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
             <Webhook className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base font-bold text-white font-mono uppercase tracking-wider">
+              <h2 className="text-base font-semibold text-white tracking-tight">
                 Webhooks de Simulação em Tempo Real
               </h2>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-bold flex items-center gap-1">
+              <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 font-medium flex items-center gap-1">
                 <Zap className="w-3 h-3 text-emerald-400" />
                 Disparo Automático Ativo
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed font-sans">
+            <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
               Notifique automaticamente o seu ERP (<strong>XD Software, Primavera, PHC, SAP, Sage</strong>), e-commerce ou servidor próprio sempre que qualquer cálculo fiscal de margem e PVP for finalizado no NANUCLOUD.
             </p>
           </div>
@@ -336,17 +336,17 @@ export const WebhookManagementSection: React.FC<WebhookManagementSectionProps> =
             type="button"
             onClick={fetchWebhooksAndLogs}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono font-bold transition active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-white/[0.08] text-xs font-medium transition active:scale-95 disabled:opacity-50 cursor-pointer"
             title="Atualizar lista e logs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-indigo-400' : ''}`} />
             <span>Atualizar</span>
           </button>
 
           <button
             type="button"
             onClick={handleOpenCreateModal}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-bold transition active:scale-95 cursor-pointer shadow-lg shadow-indigo-600/20"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition active:scale-95 cursor-pointer shadow-lg shadow-indigo-600/20"
           >
             <Plus className="w-4 h-4" />
             <span>Adicionar Endpoint</span>

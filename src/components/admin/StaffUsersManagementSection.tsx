@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shield,
   UserPlus,
@@ -15,7 +15,8 @@ import {
   Save,
   Eye,
   EyeOff,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { UserSafe } from '../../types';
 
@@ -31,52 +32,30 @@ export interface StaffUserRecord {
   lastLoginAt: string | null;
 }
 
-const DEFAULT_STAFF: StaffUserRecord[] = [
-  {
-    id: 'staff_master_1',
-    name: 'Super Administrador NANUCLOUD',
-    email: 'admin@nanucloud.com',
-    phone: '+244 923 000 001',
-    department: 'Direção Geral & TI',
-    role: 'super_admin',
-    isActive: true,
-    createdAt: '2025-01-01T00:00:00Z',
-    lastLoginAt: '2026-09-18T08:00:00Z'
-  },
-  {
-    id: 'staff_adm_2',
-    name: 'Dr. Fernando Baptista',
-    email: 'fernando.baptista@nanucloud.com',
-    phone: '+244 924 556 778',
-    department: 'Consultoria Fiscal & Pautas',
-    role: 'admin',
-    isActive: true,
-    createdAt: '2025-03-10T10:00:00Z',
-    lastLoginAt: '2026-09-17T16:30:00Z'
-  },
-  {
-    id: 'staff_com_3',
-    name: 'Paula Cristina Magalhães',
-    email: 'comercial@nanucloud.com',
-    phone: '+244 912 334 455',
-    department: 'Comercial & Vendas',
-    role: 'manager',
-    isActive: true,
-    createdAt: '2025-06-01T09:00:00Z',
-    lastLoginAt: '2026-09-18T07:45:00Z'
-  },
-  {
-    id: 'staff_sup_4',
-    name: 'Mateus Kangamba',
-    email: 'suporte@nanucloud.com',
-    phone: '+244 931 998 877',
-    department: 'Atendimento & Tickets',
-    role: 'operator',
-    isActive: true,
-    createdAt: '2025-08-15T11:00:00Z',
-    lastLoginAt: '2026-09-18T08:20:00Z'
+function mapUserToStaffRecord(u: any): StaffUserRecord {
+  let role: StaffUserRecord['role'] = 'operator';
+  if (['super_admin', 'superadmin', 'admin_level1'].includes(u.role)) {
+    role = 'super_admin';
+  } else if (['admin', 'admin_level2'].includes(u.role)) {
+    role = 'admin';
+  } else if (u.role === 'manager') {
+    role = 'manager';
+  } else {
+    role = 'operator';
   }
-];
+
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    phone: u.phone || '',
+    department: u.department || 'Administração & TI',
+    role,
+    isActive: u.isActive !== false,
+    createdAt: u.createdAt || new Date().toISOString(),
+    lastLoginAt: u.lastLoginAt || null
+  };
+}
 
 interface StaffUsersManagementSectionProps {
   currentUser: UserSafe;
@@ -97,9 +76,12 @@ export const StaffUsersManagementSection: React.FC<StaffUsersManagementSectionPr
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
-    return DEFAULT_STAFF;
+    return [];
   });
 
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [dbStatus, setDbStatus] = useState<'connected' | 'syncing' | 'error'>('connected');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -123,10 +105,46 @@ export const StaffUsersManagementSection: React.FC<StaffUsersManagementSectionPr
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
 
-  const persistStaff = (updated: StaffUserRecord[]) => {
-    setStaffList(updated);
-    localStorage.setItem('nanucloud_staff_users_db', JSON.stringify(updated));
+  const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('nanucloud_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
   };
+
+  const loadStaffFromDb = async (showToast = false) => {
+    setIsLoading(true);
+    setDbStatus('syncing');
+    try {
+      const res = await fetch('/api/admin/users?role=staff', {
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.users)) {
+          const mapped = data.users.map(mapUserToStaffRecord);
+          setStaffList(mapped);
+          localStorage.setItem('nanucloud_staff_users_db', JSON.stringify(mapped));
+          setDbStatus('connected');
+          if (showToast) {
+            showSaveNotice(`Equipa sincronizada: ${mapped.length} membros carregados do Neon.`);
+          }
+        }
+      } else {
+        setDbStatus('error');
+      }
+    } catch (err) {
+      console.error('Falha ao comunicar com o Neon PostgreSQL:', err);
+      setDbStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStaffFromDb();
+  }, []);
 
   const handleOpenCreate = () => {
     setFormName('');
@@ -150,83 +168,156 @@ export const StaffUsersManagementSection: React.FC<StaffUsersManagementSectionPr
     setFormIsActive(user.isActive);
   };
 
-  const handleSaveStaff = (e: React.FormEvent) => {
+  const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim() || !formEmail.trim()) {
       alert('Nome e E-mail são obrigatórios.');
       return;
     }
 
-    if (editingStaff) {
-      const updated = staffList.map((s) => {
-        if (s.id === editingStaff.id) {
-          return {
-            ...s,
-            name: formName.trim(),
-            email: formEmail.trim().toLowerCase(),
-            phone: formPhone.trim(),
-            department: formDepartment,
-            role: formRole,
-            isActive: formIsActive
-          };
+    setIsSaving(true);
+    try {
+      if (editingStaff) {
+        const payload = {
+          name: formName.trim(),
+          phone: formPhone.trim(),
+          department: formDepartment,
+          role: formRole,
+          isActive: formIsActive
+        };
+
+        const res = await fetch(`/api/admin/users/${editingStaff.id}`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Erro ao atualizar colaborador no banco de dados.');
         }
-        return s;
-      });
-      persistStaff(updated);
-      setEditingStaff(null);
-      showSaveNotice(`Dados do colaborador "${formName}" atualizados com sucesso!`);
-    } else {
-      if (!formPassword || formPassword.length < 6) {
-        alert('A palavra-passe inicial deve ter pelo menos 6 caracteres.');
-        return;
+
+        const data = await res.json();
+        const updatedRecord = data.user ? mapUserToStaffRecord(data.user) : {
+          ...editingStaff,
+          ...payload
+        };
+
+        const updated = staffList.map((s) => s.id === editingStaff.id ? updatedRecord : s);
+        setStaffList(updated);
+        localStorage.setItem('nanucloud_staff_users_db', JSON.stringify(updated));
+        setEditingStaff(null);
+        showSaveNotice(`Colaborador "${formName}" atualizado no Neon PostgreSQL!`);
+      } else {
+        if (!formPassword || formPassword.length < 6) {
+          alert('A palavra-passe inicial deve ter pelo menos 6 caracteres.');
+          setIsSaving(false);
+          return;
+        }
+
+        const payload = {
+          name: formName.trim(),
+          email: formEmail.trim().toLowerCase(),
+          password: formPassword,
+          phone: formPhone.trim() || '+244 923 000 000',
+          department: formDepartment,
+          role: formRole,
+          isActive: formIsActive
+        };
+
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Erro ao criar colaborador no banco de dados.');
+        }
+
+        const data = await res.json();
+        const newRecord = data.user ? mapUserToStaffRecord(data.user) : {
+          ...payload,
+          id: `staff_${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: null
+        };
+
+        const updated = [newRecord, ...staffList];
+        setStaffList(updated);
+        localStorage.setItem('nanucloud_staff_users_db', JSON.stringify(updated));
+        setIsCreateOpen(false);
+        showSaveNotice(`Novo colaborador "${newRecord.name}" gravado no Neon PostgreSQL!`);
       }
-
-      const newMember: StaffUserRecord = {
-        id: `staff_${Date.now()}`,
-        name: formName.trim(),
-        email: formEmail.trim().toLowerCase(),
-        phone: formPhone.trim(),
-        department: formDepartment,
-        role: formRole,
-        isActive: formIsActive,
-        createdAt: new Date().toISOString(),
-        lastLoginAt: null
-      };
-
-      persistStaff([newMember, ...staffList]);
-      setIsCreateOpen(false);
-      showSaveNotice(`Novo membro da equipa "${newMember.name}" adicionado com sucesso!`);
+    } catch (err: any) {
+      alert(`Falha na operação: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleToggleBlock = (user: StaffUserRecord) => {
+  const handleToggleBlock = async (user: StaffUserRecord) => {
     if (user.role === 'super_admin' && !isSuperAdmin) {
       alert('Ação bloqueada: Não é permitido desativar uma conta de Super Administrador.');
       return;
     }
 
-    const updated = staffList.map((s) => (s.id === user.id ? { ...s, isActive: !s.isActive } : s));
-    persistStaff(updated);
-    showSaveNotice(
-      user.isActive
-        ? `Colaborador "${user.name}" foi suspenso temporariamente.`
-        : `Colaborador "${user.name}" foi reativado com sucesso!`
-    );
+    try {
+      const nextStatus = !user.isActive;
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isActive: nextStatus })
+      });
+
+      if (!res.ok) {
+        throw new Error('Falha ao atualizar estado no banco de dados.');
+      }
+
+      const updated = staffList.map((s) => (s.id === user.id ? { ...s, isActive: nextStatus } : s));
+      setStaffList(updated);
+      localStorage.setItem('nanucloud_staff_users_db', JSON.stringify(updated));
+      showSaveNotice(
+        nextStatus
+          ? `Colaborador "${user.name}" foi reativado no sistema!`
+          : `Colaborador "${user.name}" foi suspenso temporariamente.`
+      );
+    } catch (err: any) {
+      alert(`Erro ao alterar estado: ${err.message}`);
+    }
   };
 
-  const handleDeleteStaff = (user: StaffUserRecord) => {
+  const handleDeleteStaff = async (user: StaffUserRecord) => {
     if (user.role === 'super_admin') {
       alert('Não é permitido eliminar um Super Administrador.');
       return;
     }
-    if (window.confirm(`Tem a certeza que deseja eliminar o colaborador "${user.name}" do sistema?`)) {
+    if (!window.confirm(`Tem a certeza que deseja eliminar permanentemente o colaborador "${user.name}" do banco de dados Neon?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Falha ao eliminar do banco de dados.');
+      }
+
       const updated = staffList.filter((s) => s.id !== user.id);
-      persistStaff(updated);
-      showSaveNotice(`Colaborador "${user.name}" eliminado do sistema.`);
+      setStaffList(updated);
+      localStorage.setItem('nanucloud_staff_users_db', JSON.stringify(updated));
+      showSaveNotice(`Colaborador "${user.name}" removido permanentemente da base de dados.`);
+    } catch (err: any) {
+      alert(`Erro ao eliminar colaborador: ${err.message}`);
     }
   };
 
-  const handleChangePasswordSubmit = (e: React.FormEvent) => {
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordModalStaff) return;
     if (newPassword.length < 6) {
@@ -238,11 +329,25 @@ export const StaffUsersManagementSection: React.FC<StaffUsersManagementSectionPr
       return;
     }
 
-    // Persist password update notice
-    showSaveNotice(`Palavra-passe de "${passwordModalStaff.name}" alterada com sucesso!`);
-    setPasswordModalStaff(null);
-    setNewPassword('');
-    setConfirmPassword('');
+    try {
+      const res = await fetch(`/api/admin/users/${passwordModalStaff.id}/password`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ newPassword })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erro ao atualizar palavra-passe no banco de dados.');
+      }
+
+      showSaveNotice(`Palavra-passe de "${passwordModalStaff.name}" atualizada e sincronizada no Neon!`);
+      setPasswordModalStaff(null);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      alert(`Erro ao atualizar senha: ${err.message}`);
+    }
   };
 
   const roleLabels: Record<string, { label: string; color: string }> = {
@@ -273,20 +378,42 @@ export const StaffUsersManagementSection: React.FC<StaffUsersManagementSectionPr
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base font-bold text-slate-100 font-mono flex items-center gap-2">
               <Shield className="w-5 h-5 text-indigo-400" /> UTILIZADORES DO SISTEMA (STAFF & ADMIN)
             </h3>
             <span className="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-mono font-bold">
               Equipa Interna
             </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1.5 ${
+              dbStatus === 'connected'
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                : dbStatus === 'syncing'
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse'
+                : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                dbStatus === 'connected' ? 'bg-emerald-400 animate-pulse' : dbStatus === 'syncing' ? 'bg-amber-400' : 'bg-rose-400'
+              }`} />
+              Neon PostgreSQL {dbStatus === 'syncing' ? 'Sincronizando...' : dbStatus === 'connected' ? 'Ativo' : 'Offline'}
+            </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 font-mono">
-            Controlo de acessos administrativos, operadores de atendimento, consultores fiscais e credenciais da equipa.
+            Controlo de acessos administrativos, operadores de atendimento e credenciais da equipa sincronizados em tempo real com o Neon PostgreSQL.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => loadStaffFromDb(true)}
+            disabled={isLoading}
+            className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-2 px-3 rounded-xl text-xs font-mono flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+            title="Recarregar dados diretamente do Neon PostgreSQL"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-400' : 'text-slate-400'}`} />
+            <span className="hidden sm:inline">Recarregar Banco</span>
+          </button>
           <button
             type="button"
             onClick={handleOpenCreate}

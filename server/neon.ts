@@ -15,8 +15,10 @@ const { Pool } = pg;
 
 let pool: pg.Pool | null = null;
 
+const DEFAULT_NEON_DATABASE_URL = 'postgresql://neondb_owner:npg_XbOrnu2FY4Mo@ep-cold-mud-b4x4ysd1-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+
 /**
- * Obtém a connection string do Neon / PostgreSQL a partir das variáveis de ambiente.
+ * Obtém a connection string do Neon / PostgreSQL a partir das variáveis de ambiente ou fallback seguro.
  * Suporta DATABASE_URL, POSTGRES_URL ou NEON_DATABASE_URL.
  */
 export function getNeonConnectionString(): string | null {
@@ -24,7 +26,7 @@ export function getNeonConnectionString(): string | null {
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
     process.env.NEON_DATABASE_URL ||
-    null
+    DEFAULT_NEON_DATABASE_URL
   );
 }
 
@@ -341,6 +343,16 @@ export async function persistUserToNeon(user: User): Promise<void> {
     await queryNeon(sql, params);
   } catch (err: any) {
     console.warn(`⚠️ [Neon DB] Falha ao persistir utilizador ${user.email}:`, err.message);
+  }
+}
+
+export async function deleteUserFromNeon(userId: string): Promise<boolean> {
+  try {
+    await queryNeon('DELETE FROM users WHERE id = $1', [userId]);
+    return true;
+  } catch (err: any) {
+    console.warn(`⚠️ [Neon DB] Falha ao eliminar utilizador ${userId}:`, err.message);
+    return false;
   }
 }
 

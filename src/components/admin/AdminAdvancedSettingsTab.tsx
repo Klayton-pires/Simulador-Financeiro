@@ -22,7 +22,8 @@ import { ManualFiscalMatrixTab } from '../ManualFiscalMatrixTab';
 import { TicketsManagementTab } from '../TicketsManagementTab';
 import { DatabaseSqlManagementSection } from './DatabaseSqlManagementSection';
 import { AuditLogsManagementSection } from './AuditLogsManagementSection';
-import { Database, FileText } from 'lucide-react';
+import { DailyBackupManagementView } from './DailyBackupManagementView';
+import { Database, FileText, Cloud } from 'lucide-react';
 
 export type AdminSettingsSection =
   | 'pending_payments'
@@ -31,6 +32,7 @@ export type AdminSettingsSection =
   | 'tickets'
   | 'payments'
   | 'database_sql'
+  | 'daily_backups'
   | 'audit_logs'
   | 'fiscal_matrix'
   | 'users';
@@ -116,6 +118,12 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
       label: 'Base de Dados & SQL',
       icon: <Database className="w-4 h-4 text-indigo-400" />,
       desc: 'Esquema SQL e criptografia Bcrypt'
+    },
+    {
+      id: 'daily_backups',
+      label: 'Backups Diários & Cloud',
+      icon: <Cloud className="w-4 h-4 text-cyan-400" />,
+      desc: 'Rotina de backups e redundância'
     },
     {
       id: 'audit_logs',
@@ -242,6 +250,10 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
 
         {activeSection === 'database_sql' && (
           <DatabaseSqlManagementSection />
+        )}
+
+        {activeSection === 'daily_backups' && (
+          <DailyBackupManagementView />
         )}
 
         {activeSection === 'audit_logs' && (

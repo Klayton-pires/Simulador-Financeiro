@@ -124,37 +124,35 @@ export const SignupBonusPresentationNotification: React.FC<SignupBonusPresentati
       </button>
 
       <div className="relative z-10 space-y-3 pr-4">
-        {/* Header tags */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 uppercase tracking-wide">
-            <Sparkles className="w-3 h-3 text-amber-400" />
-            NANUCLOUD
-          </span>
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-            <Gift className="w-3 h-3 text-emerald-400" />
-            +{bonusCredits} CONSULTAS GRÁTIS
+        {/* Header line */}
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-indigo-400 font-semibold tracking-wide">NANUCLOUD</span>
+          <span className="text-slate-500">·</span>
+          <span className="text-emerald-400 font-medium flex items-center gap-1">
+            <Gift className="w-3.5 h-3.5" />
+            +{bonusCredits} Consultas Grátis
           </span>
         </div>
 
         {/* Title & Body */}
         <div>
-          <h4 className="text-sm font-bold text-white font-mono tracking-tight leading-snug">
+          <h4 className="text-sm font-semibold text-white tracking-tight leading-snug">
             Plataforma de Simulação & Formação de Preços
           </h4>
-          <p className="text-xs text-slate-300 font-mono mt-1 leading-relaxed">
-            Cálculo de PVP a grosso e retalho, absorção logística, IVA e Imposto Industrial. Crie a sua conta e ganhe <strong className="text-emerald-400 font-bold">+{bonusCredits} consultas grátis</strong> de bónus!
+          <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+            Cálculo de PVP a grosso e retalho, absorção logística, IVA e regimes fiscais. Crie a sua conta e ganhe <strong className="text-emerald-400 font-semibold">+{bonusCredits} consultas grátis</strong> de bónus de boas-vindas!
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center gap-2 pt-1 font-mono">
+        <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
           <button
             type="button"
             onClick={() => {
               handleDismiss();
               onOpenRegister();
             }}
-            className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-bold py-2 px-3 rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full sm:flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-3.5 rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>Ganhar Bónus</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -166,15 +164,15 @@ export const SignupBonusPresentationNotification: React.FC<SignupBonusPresentati
               handleDismiss();
               onOpenLogin();
             }}
-            className="w-full sm:w-auto text-xs text-slate-300 hover:text-white px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 transition cursor-pointer text-center"
+            className="w-full sm:w-auto text-xs text-slate-300 hover:text-white px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/[0.08] transition cursor-pointer text-center font-medium"
           >
             Entrar
           </button>
         </div>
 
         {/* Auto-disappear status info */}
-        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-0.5">
-          <span>{isPaused ? 'Em pausa (cursor em cima)' : `Desaparece em ${secondsLeft}s...`}</span>
+        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
+          <span>{isPaused ? 'Em pausa' : `Fecha em ${secondsLeft}s`}</span>
           <button
             type="button"
             onClick={handleDismiss}

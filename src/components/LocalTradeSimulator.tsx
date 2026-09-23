@@ -1140,51 +1140,51 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
       />
 
       {/* Main Form Box */}
-      <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 mb-6 gap-3">
+      <div className="glass-panel border border-white/[0.08] rounded-2xl p-4 sm:p-6 shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/[0.08] pb-4 gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-slate-100 uppercase font-mono tracking-tight">
+                <h2 className="text-sm font-semibold text-white tracking-tight">
                   Simulador de Comércio Local & Venda de Produtos
                 </h2>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${
                   layoutMode === 'friendly'
-                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25'
+                    : 'bg-amber-500/10 text-amber-300 border-amber-500/25'
                 }`}>
-                  {layoutMode === 'friendly' ? 'Modo Básico / Friendly' : 'Modo Avançado Pro'}
+                  {layoutMode === 'friendly' ? 'Modo Amigável' : 'Modo Avançado Pro'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
                 {layoutMode === 'friendly'
-                  ? 'Interface amigável e simplificada: ajuste margens com um clique e visualize o preço final instantaneamente.'
+                  ? 'Interface simplificada: ajuste margens com um toque e visualize o preço final instantaneamente.'
                   : 'Formação matemática completa: múltiplos cenários comparativos, pauta fiscal, TPA e apuramento do lucro líquido.'}
               </p>
             </div>
           </div>
 
           {/* Layout Mode Local Switcher */}
-          <div className="flex items-center gap-1.5 self-end sm:self-auto bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-1.5 self-end sm:self-auto bg-slate-900/90 p-1 rounded-xl border border-white/[0.08]">
             <button
               type="button"
               onClick={() => setLayoutMode('friendly')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition ${
                 layoutMode === 'friendly'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <Zap className="w-3.5 h-3.5" />
-              <span>Básico / Amigável</span>
+              <span>Amigável</span>
             </button>
             <button
               type="button"
               onClick={() => setLayoutMode('advanced')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition ${
                 layoutMode === 'advanced'
                   ? 'bg-amber-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
@@ -2514,13 +2514,13 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                   setCostNet('10.000,000');
                   setCostGross('11.400,000');
                   setMarginPct('25');
-                  setProductName('Artigo Comercial Demonstração');
+                  setProductName('Artigo Comercial de Referência');
                   executeCalculation('25', '');
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-bold transition cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Exemplo Padrão</span>
+                <span>Simulação Rápida</span>
               </button>
 
               <button
