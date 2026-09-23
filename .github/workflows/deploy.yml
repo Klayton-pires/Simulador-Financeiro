@@ -48,3 +48,31 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+name: CI/CD Pipeline - Render
+
+on:
+  push:
+    branches:
+      - main # Dispara a action quando houver push na branch main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Instalar dependências
+        run: bun install
+
+      - name: Executar Build para validação
+        run: bun run build
+
+      - name: Disparar Deploy no Render
+        if: success()
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
