@@ -45,15 +45,3 @@ Aceda no navegador a: **[http://localhost:3000](http://localhost:3000)**
   - Comando de Build: `npm run build`
   - Diretoria de Saída (Output Directory): `dist`
 
----
-
-## 🔐 Credenciais de Acesso Inicial
-
-| Utilizador / Email | Senha | Função |
-| :--- | :--- | :--- |
-| `admin` | `admin` | **Super Administrador Nível 1** (Testes rápidos e ilimitados) |
-| `joaquim.monteiro@nanucloud.com` | `admin123` | **Super Administrador Oficial** |
-
----
-
-© 2025-2026 NANUCLOUD. Todos os direitos reservados.
