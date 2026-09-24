@@ -1,7 +1,5 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import express from 'express';
+import cors from 'cors';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import { createServer as createViteServer } from 'vite';
@@ -13,6 +11,8 @@ import aiTranslateRoutes from './server/routes/aiTranslateRoutes.js';
 import authRoutes from './server/routes/authRoutes.js';
 import { authenticateUser } from './server/auth.js';
 import { db } from './server/db.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 async function startServer() {
   const app = express();
@@ -27,7 +27,23 @@ async function startServer() {
   const { initBackupScheduler } = await import('./server/backupService.js');
   initBackupScheduler();
 
-  // Middlewares
+  // Inicializar motor de backups diários e redundância cloud
+const { initBackupScheduler } = await import('./server/backupService.js');
+initBackupScheduler();
+
+// --- ADICIONE ESTE BLOCO INTEIRO AQUI ---
+app.use(cors({
+  origin: [
+    'https://simulador-financeiro-pzy5.onrender.com',
+    'https://simulador.nanucloud.com'
+  ],
+  credentials: true
+}));
+// ----------------------------------------
+
+// Middlewares
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(cookieParser());
