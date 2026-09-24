@@ -610,7 +610,19 @@ VALUES
   ('free_queries_on_register', '10', 'Consultas gratuitas atribuídas no registo de novo utilizador')
 ON CONFLICT (setting_key) DO UPDATE SET 
   setting_value = EXCLUDED.setting_value;
+-- Criar a tabela de configurações do sistema
+CREATE TABLE IF NOT EXISTS system_settings (
+  id SERIAL PRIMARY KEY,
+  setting_key VARCHAR(50) UNIQUE NOT NULL,
+  setting_value INT NOT NULL,
+  description TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+-- Inserir o registo inicial (50 por defeito, ou altere para -1 se quiser iniciar ilimitado)
+INSERT INTO system_settings (setting_key, setting_value, description)
+VALUES ('guest_free_queries', 50, 'Limite de consultas para visitantes (-1 para ilimitado)')
+ON CONFLICT (setting_key) DO NOTHING;
 -- ============================================================================
 -- FIM DO SCRIPT DE CRIAÇÃO E IMPORTAÇÃO SQL (20 TABELAS RELACIONAIS)
 -- ============================================================================
