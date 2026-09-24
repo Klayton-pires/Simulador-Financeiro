@@ -610,7 +610,13 @@ VALUES
   ('free_queries_on_register', '10', 'Consultas gratuitas atribuídas no registo de novo utilizador')
 ON CONFLICT (setting_key) DO UPDATE SET 
   setting_value = EXCLUDED.setting_value;
-
+-- 8. Configurações Globais Essenciais do Sistema
+INSERT INTO system_settings (setting_key, setting_value, description ) VALUES 
+('app_name' , 'NANUCLOUD SIMULADOR FISCAL & COMERCIAL' , 'Nome da aplicação' ) ,
+-- ... (mantenha as outras configurações que já lá estão) ...
+('free_queries_on_register' , '10' , 'Consultas gratuitas atribuídas no registo de novo utilizador' ),
+('guest_free_queries', '-1', 'Limite de consultas para visitantes (-1 para ilimitado)') -- ADICIONE APENAS ESTA LINHA AQUI
+ON CONFLICT (setting_key ) DO UPDATE SET setting_value = EXCLUDED.setting_value;
 -- ============================================================================
 -- FIM DO SCRIPT DE CRIAÇÃO E IMPORTAÇÃO SQL (20 TABELAS RELACIONAIS)
 -- ============================================================================
