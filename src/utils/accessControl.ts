@@ -73,19 +73,8 @@ export function canUserSimulate(user: UserSafe | null): {
   isGuest?: boolean;
   requiresAuth?: boolean;
 } {
-  // If not logged in or guest operator, allow with guest demo mode
-  if (!user || user.id === 'visitante_anonimo') {
-    return {
-      allowed: true,
-      reason: 'ok',
-      message: 'Acesso de demonstração ativo para visitantes.',
-      isGuest: true,
-      requiresAuth: false
-    };
-  }
-
   // Staff and admins have unlimited queries
-  if (isStaffOrAdmin(user.role)) {
+  if (user && isStaffOrAdmin(user.role)) {
     return {
       allowed: true,
       reason: 'ok',
@@ -95,12 +84,33 @@ export function canUserSimulate(user: UserSafe | null): {
     };
   }
 
-  // Client user
+  // If not logged in or guest operator, check available guest demonstration credits
+  if (!user || user.id === 'visitante_anonimo') {
+    const guestCredits = getGuestCredits();
+    if (guestCredits <= 0) {
+      return {
+        allowed: false,
+        reason: 'no_credits',
+        message: 'Créditos de demonstração esgotados (0 créditos). Não é permitido simular sem créditos. Por favor subscreva um plano para recarregar.',
+        isGuest: true,
+        requiresAuth: true
+      };
+    }
+    return {
+      allowed: true,
+      reason: 'ok',
+      message: `Acesso com créditos ativos (${guestCredits} créditos restantes).`,
+      isGuest: true,
+      requiresAuth: false
+    };
+  }
+
+  // Client user: strictly require positive credit balance
   if ((user.queriesRemaining || 0) <= 0) {
     return {
       allowed: false,
       reason: 'no_credits',
-      message: 'O seu saldo de consultas esgotou-se. Por favor recarregue a sua conta para continuar a simular.',
+      message: 'Créditos de consulta esgotados (0 créditos). Não se faz simulação sem créditos. Por favor recarregue a sua conta para simular.',
       isGuest: false,
       requiresAuth: false
     };
@@ -109,7 +119,7 @@ export function canUserSimulate(user: UserSafe | null): {
   return {
     allowed: true,
     reason: 'ok',
-    message: 'Acesso ativo à simulação fiscal.',
+    message: `Acesso ativo (${user.queriesRemaining} créditos disponíveis).`,
     isGuest: false,
     requiresAuth: false
   };

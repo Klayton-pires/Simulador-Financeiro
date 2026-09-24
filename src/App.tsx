@@ -26,6 +26,7 @@ import { AdminAdvancedSettingsTab } from './components/admin/AdminAdvancedSettin
 import { FinancialAnalyticsDashboard } from './components/FinancialAnalyticsDashboard';
 import { LegalTermsModal } from './components/LegalTermsModal';
 import { CornerMenu } from './components/CornerMenu';
+import { useGuestCredits } from './utils/guestCredits';
 
 function AppContent() {
   const { language, setLanguage } = useI18n();
@@ -36,6 +37,7 @@ function AppContent() {
   });
 
   const { currentUser, isClient, isAdmin, consumeCredit } = useAuth();
+  const guestCredits = useGuestCredits();
 
   const toggleSidebar = () => {
     setIsSidebarHidden((prev) => {
@@ -64,7 +66,7 @@ function AppContent() {
     country: 'Angola',
     role: 'client',
     isActive: true,
-    queriesRemaining: 50,
+    queriesRemaining: guestCredits,
     totalQueriesUsed: 0,
     activePlanId: 'plan_starter',
     activePlanName: 'Acesso Livre Simuladores',

@@ -100,12 +100,30 @@ export const ConfirmSimulationModal: React.FC<ConfirmSimulationModalProps> = ({
           </div>
         </div>
 
-        {/* Simulation Notice */}
-        <div className="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex items-center gap-2.5 text-xs text-indigo-300">
-          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-          <div className="leading-snug text-[11px]">
+        {/* Simulation Notice & Credit Requirement */}
+        <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Custo desta Simulação:</span>
+              <span className="font-bold text-emerald-400">1 Crédito</span>
+            </div>
+            <div className="text-[11px]">
+              {isStaffOrAdmin ? (
+                <span className="text-indigo-300 font-bold bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-500/20">
+                  Admin Ilimitado
+                </span>
+              ) : (
+                <span className="text-slate-400">
+                  Saldo Disponível: <strong className="text-emerald-300 font-bold font-mono">{userQueriesRemaining}</strong> créditos
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-indigo-300/90 text-[11px] pt-1 border-t border-slate-800/80">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span>
-              <strong>Simulação Imediata:</strong> Os cálculos fiscais e apuramentos serão gerados e exibidos em tempo real.
+              Ao clicar no botão de confirmação, será gerado e apresentado <strong>exclusivamente o resultado solicitado</strong>.
             </span>
           </div>
         </div>

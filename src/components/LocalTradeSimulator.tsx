@@ -672,21 +672,21 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
 
     setFieldErrors({});
 
-    // AUTH & RBAC SIMULATION CHECK
+    // Check credit allowance strictly: no simulation without credits
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
       showToast({
         type: 'warning',
-        title: 'Limite Atingido',
+        title: 'Sem Créditos',
         message: simCheck.message
       });
       setShowExhaustedModal(true);
       return;
     }
 
-    // Execute calculation directly without blocking confirmation modal
-    executeCalculation(finalMargin, activeFixedPrice);
+    // Open confirmation modal to confirm simulation parameters before executing
+    setShowConfirmModal(true);
   };
 
   const executeCalculation = async (mPctStr: string, fPriceStr: string) => {
@@ -809,19 +809,11 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
         customTitle = `Margem Personalizada (${m}%)`;
       }
 
+      // Present ONLY the specific simulation result requested by the client
       scenarios.push({
         title: customTitle,
         calc: customCalc,
         isCustom: true
-      });
-
-      country.margins.forEach((m) => {
-        const stdCalc = processMathScenario(net, m, 0, vatRate, tpaRate, country.ii, currentExtras, { mode: 'margin' });
-        scenarios.push({
-          title: `Margem Padrão (${m}%)`,
-          calc: stdCalc,
-          isCustom: false
-        });
       });
 
       setCalculationResults(scenarios);

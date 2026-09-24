@@ -129,20 +129,21 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
       return;
     }
 
+    // Check credit allowance strictly: no simulation without credits
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
       showToast({
         type: 'warning',
-        title: 'Limite Atingido',
+        title: 'Sem Créditos',
         message: simCheck.message
       });
       setShowExhaustedModal(true);
       return;
     }
 
-    // Direct calculation without blocking confirmation modal
-    handleConfirmAndExecute();
+    // Open confirmation modal to confirm simulation parameters before executing
+    setShowConfirmModal(true);
   };
 
   const handleConfirmAndExecute = async () => {

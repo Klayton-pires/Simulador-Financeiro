@@ -220,21 +220,21 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
       return;
     }
 
-    // AUTH & RBAC SIMULATION CHECK - Allows free demo credits without login
+    // Check credit allowance strictly: no simulation without credits
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
       showToast({
         type: 'warning',
-        title: 'Limite Atingido',
+        title: 'Sem Créditos',
         message: simCheck.message
       });
       setShowExhaustedModal(true);
       return;
     }
 
-    // Direct execution without blocking modal
-    handleConfirmAndExecute();
+    // Open confirmation modal to confirm simulation parameters before executing
+    setShowConfirmModal(true);
   };
 
   const handleConfirmAndExecute = async () => {

@@ -27,23 +27,31 @@ async function startServer() {
   const { initBackupScheduler } = await import('./server/backupService.js');
   initBackupScheduler();
 
-  // Inicializar motor de backups diários e redundância cloud
-const { initBackupScheduler } = await import('./server/backupService.js');
-initBackupScheduler();
-
-// --- ADICIONE ESTE BLOCO INTEIRO AQUI ---
-app.use(cors({
-  origin: [
+  // CORS configuration
+  const allowedOrigins = [
     'https://simulador-financeiro-pzy5.onrender.com',
     'https://simulador.nanucloud.com'
-  ],
-  credentials: true
-}));
-// ----------------------------------------
+  ];
 
-// Middlewares
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.includes('.run.app') ||
+        origin.includes('.onrender.com') ||
+        origin.includes('nanucloud.com')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true
+  }));
+
+  // Middlewares
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(cookieParser());
