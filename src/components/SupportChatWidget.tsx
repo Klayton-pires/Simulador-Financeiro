@@ -28,12 +28,15 @@ export const SupportChatWidget: React.FC<SupportChatWidgetProps> = ({
 
   useEffect(() => {
     let storedSession = localStorage.getItem('nanucloud_chat_session_id');
-    if (!storedSession) {
+    if (user && user.id) {
+      storedSession = `usr_${user.id}`;
+      localStorage.setItem('nanucloud_chat_session_id', storedSession);
+    } else if (!storedSession) {
       storedSession = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       localStorage.setItem('nanucloud_chat_session_id', storedSession);
     }
     setSessionId(storedSession);
-  }, []);
+  }, [user]);
 
   // Presence Heartbeat: Notify server that this client is currently active/online
   useEffect(() => {
@@ -111,7 +114,8 @@ export const SupportChatWidget: React.FC<SupportChatWidgetProps> = ({
 
   const fetchMessages = async (sid: string) => {
     try {
-      const res = await fetch(`/api/chat/messages?sessionId=${sid}`);
+      const userParam = user?.id ? `&userId=${user.id}` : '';
+      const res = await fetch(`/api/chat/messages?sessionId=${sid}${userParam}`);
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages || []);
@@ -150,7 +154,8 @@ export const SupportChatWidget: React.FC<SupportChatWidgetProps> = ({
           sessionId,
           text,
           senderName: effectiveName,
-          senderEmail: effectiveEmail
+          senderEmail: effectiveEmail,
+          userId: user?.id
         })
       });
 
@@ -236,18 +241,18 @@ export const SupportChatWidget: React.FC<SupportChatWidgetProps> = ({
 
               <div>
                 <h3 className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
-                  <span>NANUCLOUD Live Suporte</span>
+                  <span>Chat de Suporte & Atendimento</span>
                 </h3>
                 <div className="text-[10px] text-slate-400 flex items-center gap-1">
                   {isAdminOnline ? (
                     <span className="text-emerald-400 font-semibold flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      Operador Online {onlineAdminName ? `(${onlineAdminName})` : ''} - Chat em Direto
+                      Operador em Direto {onlineAdminName ? `(${onlineAdminName})` : ''} • Histórico Ativo
                     </span>
                   ) : (
-                    <span className="text-amber-300 flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-amber-400" />
-                      Staff Offline - Modo Ticket Pendente
+                    <span className="text-slate-300 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Troca de Mensagens & Histórico Guardado
                     </span>
                   )}
                 </div>

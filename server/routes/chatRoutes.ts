@@ -98,7 +98,8 @@ router.get('/status', (req: AuthRequest, res: Response) => {
 // 3. OBTER HISTÓRICO DE MENSAGENS DE UMA SESSÃO
 router.get('/messages', (req: AuthRequest, res: Response) => {
   const sessionId = (req.query.sessionId as string) || (req.user ? `usr_${req.user.id}` : 'anonymous');
-  const messages = db.getChatMessages(sessionId);
+  const userId = req.user?.id || (req.query.userId as string) || undefined;
+  const messages = db.getChatMessages(sessionId, userId);
   return res.json({ messages });
 });
 
@@ -106,20 +107,21 @@ router.get('/messages', (req: AuthRequest, res: Response) => {
 router.post('/send', (req: AuthRequest, res: Response) => {
   try {
     cleanPresences();
-    const { sessionId, senderName, senderEmail, text, language } = req.body;
+    const { sessionId, senderName, senderEmail, text, language, userId } = req.body;
 
     if (!text || !text.trim()) {
       return res.status(400).json({ error: 'A mensagem não pode estar vazia.' });
     }
 
-    const cleanSessionId = sessionId || (req.user ? `usr_${req.user.id}` : `sess_${Date.now()}`);
+    const effectiveUserId = req.user?.id || userId;
+    const cleanSessionId = sessionId || (effectiveUserId ? `usr_${effectiveUserId}` : `sess_${Date.now()}`);
     const name = senderName || (req.user ? req.user.name : 'Visitante');
     const email = senderEmail || (req.user ? req.user.email : undefined);
 
     // Record client presence
     activeClients.set(cleanSessionId, {
       sessionId: cleanSessionId,
-      userId: req.user?.id,
+      userId: effectiveUserId,
       name,
       email,
       lastSeen: Date.now()
@@ -128,7 +130,7 @@ router.post('/send', (req: AuthRequest, res: Response) => {
     const userMessage: ChatMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       sessionId: cleanSessionId,
-      userId: req.user?.id,
+      userId: effectiveUserId,
       senderType: 'user',
       senderName: name,
       userEmail: email,
@@ -178,7 +180,7 @@ router.post('/send', (req: AuthRequest, res: Response) => {
       adminOnline: isStaffOnline,
       mode: isStaffOnline ? 'live_direct' : 'offline_ticket',
       ticket: ticketCreated,
-      messages: db.getChatMessages(cleanSessionId)
+      messages: db.getChatMessages(cleanSessionId, effectiveUserId)
     });
   } catch (err: any) {
     console.error('Error on chat send:', err);

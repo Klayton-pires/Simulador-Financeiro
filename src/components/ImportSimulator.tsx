@@ -15,8 +15,10 @@ import {
   Download,
   FileText,
   FileSpreadsheet,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Info
 } from 'lucide-react';
+import { useLayoutMode } from '../data/layoutMode';
 import {
   exportSimulationDossierPDF,
   exportSimulationDossierExcel
@@ -46,6 +48,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
   onCalculationDone
 }) => {
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.pt;
+  const [layoutMode, setLayoutMode] = useLayoutMode();
   const [showExhaustedModal, setShowExhaustedModal] = useState<boolean>(false);
 
   const isStaff = isStaffOrAdmin(user?.role);
@@ -146,7 +149,15 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
     setIsCalculating(true);
 
     try {
+      const isFriendly = layoutMode === 'friendly';
       const cFob = parseFormattedNumber(fob);
+      const cFreight = parseFormattedNumber(freight);
+      const cIns = isFriendly ? 0 : parseFormattedNumber(insurance);
+      const cCustRate = parseFormattedNumber(customsRate);
+      const cIecRate = isFriendly ? 0 : parseFormattedNumber(iecRate);
+      const cOther = isFriendly ? 0 : parseFormattedNumber(otherFees);
+      const cMargin = parseFormattedNumber(marginPct);
+      const cTpa = isFriendly ? 0 : parseFormattedNumber(tpaRate);
       let remaining = user?.queriesRemaining || 0;
       let calcData = null;
 
@@ -158,13 +169,13 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
             originCountry,
             destCountry,
             fob: cFob,
-            freight: parseFormattedNumber(freight),
-            insurance: parseFormattedNumber(insurance),
-            customsRate: parseFormattedNumber(customsRate),
-            iecRate: parseFormattedNumber(iecRate),
-            otherFees: parseFormattedNumber(otherFees),
+            freight: cFreight,
+            insurance: cIns,
+            customsRate: cCustRate,
+            iecRate: cIecRate,
+            otherFees: cOther,
             vatRate,
-            marginPct: parseFormattedNumber(marginPct),
+            marginPct: cMargin,
             productName,
             notes
           })
@@ -187,13 +198,6 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
       }
 
       if (!calcData) {
-        const cFreight = parseFormattedNumber(freight);
-        const cIns = parseFormattedNumber(insurance);
-        const cCustRate = parseFormattedNumber(customsRate);
-        const cIecRate = parseFormattedNumber(iecRate);
-        const cOther = parseFormattedNumber(otherFees);
-        const cMargin = parseFormattedNumber(marginPct);
-
         const cif = cFob + cFreight + cIns;
         const customsDuty = cif * (cCustRate / 100);
         const iecTax = cif * (cIecRate / 100);
@@ -434,7 +438,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
 
       {/* Import Form Card */}
       <div className="bg-slate-850 border border-slate-700/80 rounded-3xl p-5 md:p-8 shadow-xl">
-        <div className="flex items-center justify-between border-b border-slate-700/80 pb-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-700/80 pb-4 mb-6 gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-sky-600/20 border border-sky-500/30 flex items-center justify-center text-sky-400">
               <Ship className="w-5 h-5" />
@@ -444,9 +448,38 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
               <p className="text-xs text-slate-400">Desembaraço aduaneiro, CIF, Direitos e Custo Nacionalizado</p>
             </div>
           </div>
-          <span className="text-xs bg-emerald-500/10 text-emerald-300 font-bold px-3 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5" /> Módulo Ativo
-          </span>
+          <div className="flex items-center gap-2">
+            {/* Mode Switcher */}
+            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-700/80">
+              <button
+                type="button"
+                onClick={() => setLayoutMode('friendly')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 ${
+                  layoutMode === 'friendly'
+                    ? 'bg-sky-600 text-white shadow'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>Básico</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMode('advanced')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 ${
+                  layoutMode === 'advanced'
+                    ? 'bg-amber-600 text-white shadow'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <SlidersHorizontal className="w-3 h-3" />
+                <span>Avançado Pro</span>
+              </button>
+            </div>
+
+            <span className="text-xs bg-emerald-500/10 text-emerald-300 font-bold px-3 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" /> Módulo Ativo
+            </span>
+          </div>
         </div>
 
         {errorMessage && (
@@ -520,7 +553,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
           <p className="text-xs font-bold text-sky-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
             <Anchor className="w-3.5 h-3.5" /> 1. Valores Internacionais de Transporte (CIF)
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200">{t.lblFob}</label>
               <NumericInput
@@ -541,15 +574,17 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-200">{t.lblInsurance}</label>
-              <NumericInput
-                value={insurance}
-                onChange={setInsurance}
-                placeholder="0,000"
-                className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-sky-500 outline-none"
-              />
-            </div>
+            {layoutMode === 'advanced' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-200">{t.lblInsurance}</label>
+                <NumericInput
+                  value={insurance}
+                  onChange={setInsurance}
+                  placeholder="0,000"
+                  className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-sky-500 outline-none"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -558,7 +593,7 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
           <p className="text-xs font-bold text-amber-300 uppercase tracking-wider mb-3">
             2. Direitos e Taxas Aduaneiras na Entrada ({destFiscal.agency})
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-200">{t.lblCustoms}</label>
               <NumericInput
@@ -569,25 +604,29 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-200">{t.lblIec}</label>
-              <NumericInput
-                value={iecRate}
-                onChange={setIecRate}
-                placeholder="0,000"
-                className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-amber-500 outline-none"
-              />
-            </div>
+            {layoutMode === 'advanced' && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-200">{t.lblIec}</label>
+                  <NumericInput
+                    value={iecRate}
+                    onChange={setIecRate}
+                    placeholder="0,000"
+                    className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-amber-500 outline-none"
+                  />
+                </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-200">{t.lblFees}</label>
-              <NumericInput
-                value={otherFees}
-                onChange={setOtherFees}
-                placeholder="0,000"
-                className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-amber-500 outline-none"
-              />
-            </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-200">{t.lblFees}</label>
+                  <NumericInput
+                    value={otherFees}
+                    onChange={setOtherFees}
+                    placeholder="0,000"
+                    className="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-amber-500 outline-none"
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -603,15 +642,17 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300">Taxa TPA / Banco (%)</label>
-            <NumericInput
-              value={tpaRate}
-              onChange={setTpaRate}
-              placeholder="0,000"
-              className="w-full bg-slate-900 border border-slate-700 text-indigo-300 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-indigo-500 outline-none"
-            />
-          </div>
+          {layoutMode === 'advanced' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300">Taxa TPA / Banco (%)</label>
+              <NumericInput
+                value={tpaRate}
+                onChange={setTpaRate}
+                placeholder="0,000"
+                className="w-full bg-slate-900 border border-slate-700 text-indigo-300 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-indigo-500 outline-none"
+              />
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-400">{t.lblProductName}</label>
@@ -818,6 +859,22 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
           </div>
         </div>
       )}
+
+      {/* Rodapé Informativo & Notas Técnicas de Importação */}
+      <footer className="mt-6 border-t border-slate-800/80 pt-4 space-y-3">
+        <div className="bg-[#0B132B]/70 border border-slate-800 rounded-xl p-4 text-xs font-mono text-slate-400 space-y-2">
+          <div className="flex items-center gap-2 text-slate-200 font-bold">
+            <Info className="w-4 h-4 text-sky-400 shrink-0" />
+            <span>Regulamentação Aduaneira & Comércio Internacional ({destFiscal.name} - {destFiscal.agency})</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-300">
+            <strong className="text-sky-300">Valor Aduaneiro CIF:</strong> A base de tributação na alfândega é calculada sobre o somatório de FOB (preço da mercadoria), Frete Internacional e Seguro de Transporte. Em modo simplificado, despesas acessórias não preenchidas não oneram o cálculo.
+          </p>
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            <strong>Desembaraço Aduaneiro:</strong> O apuramento gerado tem finalidade orçamentária e simulação de custos de desembarque. A liquidação final é formalizada pelo Despachante Aduaneiro Oficial via Documento Único (DU).
+          </p>
+        </div>
+      </footer>
       </div>
 
       {/* Confirmation Modal before calculating results */}

@@ -22,7 +22,8 @@ import {
   Save,
   RotateCcw,
   Sparkles,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Info
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -35,6 +36,7 @@ import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
 import { NumericInput } from './common/NumericInput';
 import { parseFormattedNumber } from '../utils/numberFormat';
+import { useLayoutMode } from '../data/layoutMode';
 
 interface ServicesConsultingSimulatorProps {
   user: UserSafe | null;
@@ -52,6 +54,7 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
   onCalculationDone
 }) => {
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.pt;
+  const [layoutMode, setLayoutMode] = useLayoutMode();
 
   const [showExhaustedModal, setShowExhaustedModal] = useState<boolean>(false);
 
@@ -155,13 +158,14 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
 
   const baseLabor = calcBaseLabor();
 
-  // Transport calculation
-  const totalTransport = clientPaysTransport
+  // Transport calculation (Exclusivo do Modo Avançado)
+  const isFriendly = layoutMode === 'friendly';
+  const totalTransport = (!isFriendly && clientPaysTransport)
     ? parseFormattedNumber(transportCostPerPerson) * (techniciansCount || 1)
     : 0;
 
-  // Meals calculation
-  const totalMeals = clientPaysMeals
+  // Meals calculation (Exclusivo do Modo Avançado)
+  const totalMeals = (!isFriendly && clientPaysMeals)
     ? parseFormattedNumber(mealAllowancePerPerson) * (techniciansCount || 1) * (daysDuration || 1)
     : 0;
 
@@ -492,8 +496,35 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons & Layout Mode Switcher */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Mode Switcher */}
+          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-700/80">
+            <button
+              type="button"
+              onClick={() => setLayoutMode('friendly')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 ${
+                layoutMode === 'friendly'
+                  ? 'bg-indigo-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>Básico</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutMode('advanced')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1 ${
+                layoutMode === 'advanced'
+                  ? 'bg-amber-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+              <span>Avançado Pro</span>
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={handleExportPDF}
@@ -757,106 +788,108 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
             )}
           </div>
 
-          {/* Card 3: Logistics & Team Expenses (User Paid) */}
-          <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-5 space-y-4">
-            <h3 className="text-xs font-bold text-slate-200 font-mono flex items-center gap-2">
-              <Car className="w-4 h-4 text-amber-400" /> CUSTOS LOGÍSTICOS OPCIONAIS A CARGO DO UTILIZADOR
-            </h3>
+          {/* Card 3: Logistics & Team Expenses (User Paid) - Exclusivo do Modo Avançado */}
+          {layoutMode === 'advanced' && (
+            <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-5 space-y-4">
+              <h3 className="text-xs font-bold text-slate-200 font-mono flex items-center gap-2">
+                <Car className="w-4 h-4 text-amber-400" /> CUSTOS LOGÍSTICOS OPCIONAIS A CARGO DO UTILIZADOR
+              </h3>
 
-            {/* Transport Checkbox & Inputs */}
-            <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-mono font-bold text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={clientPaysTransport}
-                  onChange={(e) => setClientPaysTransport(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700"
-                />
-                UTILIZADOR PAGA O TRANSPORTE DA EQUIPE / TÉCNICOS
-              </label>
+              {/* Transport Checkbox & Inputs */}
+              <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-mono font-bold text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={clientPaysTransport}
+                    onChange={(e) => setClientPaysTransport(e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700"
+                  />
+                  UTILIZADOR PAGA O TRANSPORTE DA EQUIPE / TÉCNICOS
+                </label>
 
-              {clientPaysTransport && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">CUSTO TRANSPORTE POR PESSOA ({country.curr}):</label>
-                    <NumericInput
-                      value={transportCostPerPerson}
-                      onChange={setTransportCostPerPerson}
-                      placeholder="0,000"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
-                    />
+                {clientPaysTransport && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">CUSTO TRANSPORTE POR PESSOA ({country.curr}):</label>
+                      <NumericInput
+                        value={transportCostPerPerson}
+                        onChange={setTransportCostPerPerson}
+                        placeholder="0,000"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Nº DE TÉCNICOS DESIGNADOS:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={techniciansCount}
+                        onChange={(e) => setTechniciansCount(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+                      />
+                    </div>
+                    <div className="sm:col-span-2 text-right">
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Total Transporte: <strong className="text-amber-300">{formatCurrency(totalTransport)}</strong>
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Nº DE TÉCNICOS DESIGNADOS:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={techniciansCount}
-                      onChange={(e) => setTechniciansCount(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
-                    />
+                )}
+              </div>
+
+              {/* Meals Checkbox & Inputs */}
+              <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-mono font-bold text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={clientPaysMeals}
+                    onChange={(e) => setClientPaysMeals(e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700"
+                  />
+                  UTILIZADOR PAGA A ALIMENTAÇÃO / DIÁRIAS DA EQUIPE
+                </label>
+
+                {clientPaysMeals && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">DIÁRIA POR PESSOA ({country.curr}):</label>
+                      <NumericInput
+                        value={mealAllowancePerPerson}
+                        onChange={setMealAllowancePerPerson}
+                        placeholder="0,000"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">Nº DE DIAS DE TRABALHO:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={daysDuration}
+                        onChange={(e) => setDaysDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono text-slate-400 block mb-1">TÉCNICOS A ALIMENTAR:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={techniciansCount}
+                        disabled
+                        className="w-full bg-slate-900/50 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 font-mono"
+                      />
+                    </div>
+                    <div className="sm:col-span-3 text-right">
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Total Diárias ({techniciansCount} téc. × {daysDuration} dias): <strong className="text-amber-300">{formatCurrency(totalMeals)}</strong>
+                      </span>
+                    </div>
                   </div>
-                  <div className="sm:col-span-2 text-right">
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Total Transporte: <strong className="text-amber-300">{formatCurrency(totalTransport)}</strong>
-                    </span>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-
-            {/* Meals Checkbox & Inputs */}
-            <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-mono font-bold text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={clientPaysMeals}
-                  onChange={(e) => setClientPaysMeals(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-900 border-slate-700"
-                />
-                UTILIZADOR PAGA A ALIMENTAÇÃO / DIÁRIAS DA EQUIPE
-              </label>
-
-              {clientPaysMeals && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">DIÁRIA POR PESSOA ({country.curr}):</label>
-                    <NumericInput
-                      value={mealAllowancePerPerson}
-                      onChange={setMealAllowancePerPerson}
-                      placeholder="0,000"
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">Nº DE DIAS DE TRABALHO:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={daysDuration}
-                      onChange={(e) => setDaysDuration(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 block mb-1">TÉCNICOS A ALIMENTAR:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={techniciansCount}
-                      disabled
-                      className="w-full bg-slate-900/50 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 font-mono"
-                    />
-                  </div>
-                  <div className="sm:col-span-3 text-right">
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Total Diárias ({techniciansCount} téc. × {daysDuration} dias): <strong className="text-amber-300">{formatCurrency(totalMeals)}</strong>
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
 
           {/* Card 4: Margins & Fiscal Matrix Parameters */}
           <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-5 space-y-4">
@@ -995,7 +1028,7 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                   <span className="text-indigo-300 font-bold">+{formatCurrency(markupAmount)}</span>
                 </div>
 
-                {(clientPaysTransport || clientPaysMeals) && (
+                {layoutMode === 'advanced' && (clientPaysTransport || clientPaysMeals) && (
                   <div className="flex justify-between items-center text-slate-400">
                     <span>Logística (Transporte + Refeições):</span>
                     <span className="text-amber-300 font-bold">+{formatCurrency(totalLogistics)}</span>
@@ -1108,6 +1141,22 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
           )}
         </div>
       </div>
+
+      {/* Rodapé Informativo & Notas Técnicas de Serviços */}
+      <footer className="mt-6 border-t border-slate-800/80 pt-4 space-y-3">
+        <div className="bg-[#0B132B]/70 border border-slate-800 rounded-xl p-4 text-xs font-mono text-slate-400 space-y-2">
+          <div className="flex items-center gap-2 text-slate-200 font-bold">
+            <Info className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span>Notas Técnicas & Enquadramento Fiscal de Serviços ({country.name} - {country.agency})</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-300">
+            <strong className="text-indigo-300">Mecânica de Retenção na Fonte:</strong> Em prestações de serviços entre sujeitos passivos, a retenção na fonte ({effectiveRetentionRate}%) é deduzida diretamente na liquidação e declarada pelo adquirente.
+          </p>
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            <strong>Despesas e Diárias:</strong> Custos de transporte e alimentação faturados ao cliente integram a base tributável ou são objeto de reembolso direto mediante apresentação de comprovativos fiscais válidos.
+          </p>
+        </div>
+      </footer>
 
       {/* Confirmation Modal before calculating results */}
       <ConfirmSimulationModal

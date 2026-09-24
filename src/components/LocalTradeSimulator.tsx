@@ -344,6 +344,22 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
   };
 
   const getEffectiveExtraCosts = () => {
+    if (layoutMode === 'friendly') {
+      const emptyItem = { net: 0, vat: 0, total: 0, raw: 0, passedNet: 0 };
+      return {
+        hasExtras: false,
+        transport: { ...emptyItem, unit: 0, isRoundTrip: false, mode: 'isento', rate: 0, inclusionPct: 100 },
+        meals: { ...emptyItem, mode: 'isento', rate: 0, inclusionPct: 100 },
+        lodging: { ...emptyItem, days: 1, dailyRate: 0, mode: 'isento', rate: 0, inclusionPct: 100 },
+        otherExtras: { ...emptyItem, label: '', mode: 'isento', rate: 0, inclusionPct: 100 },
+        totalExtraNet: 0,
+        totalExtraVat: 0,
+        totalExtraPaid: 0,
+        totalExtraNetPassedToPrice: 0,
+        totalExtraNetAbsorbed: 0
+      };
+    }
+
     const tRawUnit = parseFormattedNumber(transportCost);
     const tVal = tRawUnit * (transportRoundTrip ? 2 : 1);
     const mVal = parseFormattedNumber(mealsCost);
@@ -523,7 +539,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     const extraProfitAtRetail = retailTotalNetProfit - bulkTotalNetProfit;
 
     const retailDecomposition = {
-      isEnabled: enableBulkRetail,
+      isEnabled: layoutMode === 'advanced' && enableBulkRetail,
       isBeerKegMode,
       kegLiters,
       glassSizeMl,
@@ -1348,7 +1364,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                   </div>
                 </div>
 
-                {currentExtras.hasExtras && (
+                {layoutMode === 'advanced' && currentExtras.hasExtras && (
                   <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] font-mono text-amber-300 bg-amber-950/30 p-2.5 rounded-lg border border-amber-500/30">
                     <div className="flex items-center gap-1.5">
                       <Truck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -1364,8 +1380,9 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
               </div>
             )}
 
-            {/* Secção 1: Custos de Transporte, Logística & Despesas de Aquisição (100% CUSTOS - NÃO LUCROS) */}
-            <div className="pt-4 border-t border-slate-800/80 space-y-3.5">
+            {/* Secções Avançadas: Custos de Transporte, Logística & Despesas de Aquisição e Grosso vs Retalho (Exclusivas do Modo Avançado Pro) */}
+            {layoutMode === 'advanced' && (
+              <div className="pt-4 border-t border-slate-800/80 space-y-3.5">
               <div className="p-3.5 bg-[#0B132B] rounded-xl border border-amber-500/30 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -1998,7 +2015,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                 )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Estratégia de Preço & Formação de Lucro (3 Modos: Margem %, Lucro Desejado em Moeda, Preço de Venda Pretendido) */}
           <div className="p-4 bg-[#0F172A] rounded-xl border border-slate-800/80 space-y-4">
@@ -2523,40 +2540,44 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                 <span>Simulação Rápida</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setCostNet('7.200,000');
-                  setCostGross('8.208,000');
-                  setProductName('Caixa de Cerveja Cuca / Sagres (24 Garrafas)');
-                  setMarginPct('20');
-                  applyBeerBoxPreset();
-                  setRetailMarginPct('40');
-                  executeCalculation('20', '');
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold transition cursor-pointer"
-              >
-                <span>🍺</span>
-                <span>Caixa de Cerveja (24x Retalho)</span>
-              </button>
+              {layoutMode === 'advanced' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCostNet('7.200,000');
+                      setCostGross('8.208,000');
+                      setProductName('Caixa de Cerveja Cuca / Sagres (24 Garrafas)');
+                      setMarginPct('20');
+                      applyBeerBoxPreset();
+                      setRetailMarginPct('40');
+                      executeCalculation('20', '');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold transition cursor-pointer"
+                  >
+                    <span>🍺</span>
+                    <span>Caixa de Cerveja (24x Retalho)</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setCostNet('45.000,000');
-                  setCostGross('51.300,000');
-                  setProductName('Barril de Fino / Chopp Cuca (50 Litros)');
-                  setMarginPct('20');
-                  applyBeerKegPreset('50');
-                  setRetailMarginPct('60');
-                  applyLogisticsExpensesPreset();
-                  executeCalculation('20', '');
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold transition cursor-pointer"
-              >
-                <span>🍻</span>
-                <span>Barril de Fino (50L + Transporte/Estadia)</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCostNet('45.000,000');
+                      setCostGross('51.300,000');
+                      setProductName('Barril de Fino / Chopp Cuca (50 Litros)');
+                      setMarginPct('20');
+                      applyBeerKegPreset('50');
+                      setRetailMarginPct('60');
+                      applyLogisticsExpensesPreset();
+                      executeCalculation('20', '');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold transition cursor-pointer"
+                  >
+                    <span>🍻</span>
+                    <span>Barril de Fino (50L + Transporte/Estadia)</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ) : (
@@ -2863,7 +2884,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                         1. Formação do Preço / Faturação Bruta
                       </p>
 
-                      {calc.extras?.hasExtras ? (
+                      {layoutMode === 'advanced' && calc.extras?.hasExtras ? (
                         <>
                           <div className="flex justify-between text-slate-300">
                             <span>Custo Mercadoria Base</span>
@@ -3114,6 +3135,22 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
       )}
       </div>
 
+      {/* Rodapé Informativo & Notas Técnicas Comerciais */}
+      <footer className="mt-6 border-t border-slate-800/80 pt-4 space-y-3">
+        <div className="bg-[#0B132B]/70 border border-slate-800 rounded-xl p-4 text-xs font-mono text-slate-400 space-y-2">
+          <div className="flex items-center gap-2 text-slate-200 font-bold">
+            <Info className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span>Notas Técnicas e Enquadramento Fiscal ({country.name} - {country.agency})</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-300">
+            <strong className="text-amber-300">Regra de Gestão Comercial:</strong> Custos com Transporte (Ida e Volta), Alimentação / Diárias e Estadia constituem despesas acessórias de aquisição. O simulador só apura o lucro comercial após a recuperação integral dessas despesas amortizadas.
+          </p>
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            <strong>Mecânica Fiscal:</strong> O IVA suportado na compra constitui crédito fiscal dedutível, enquanto o IVA cobrado ao consumidor no PVP final é entregue ao Estado. O lucro líquido apurado reflete o montante real disponível após dedução de todas as comissões de POS/TPA e tributações incidentes.
+          </p>
+        </div>
+      </footer>
+
       {/* Mandatory Accountant Disclaimer */}
       <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2.5 text-xs text-amber-300">
         <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
@@ -3159,6 +3196,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
         onOpenAuth={onOpenAuth}
         isGuest={!user}
       />
+    </div>
     </div>
   );
 };

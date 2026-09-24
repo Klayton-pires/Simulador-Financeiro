@@ -395,9 +395,12 @@ class DatabaseEngine {
   public getSmsLogs(): SmsLogItem[] { return this.smsLogs; }
   public getTrafficCampaigns(): TrafficCampaign[] { return this.trafficCampaigns; }
 
-  public getChatMessages(sessionId?: string): ChatMessage[] {
-    if (sessionId) {
-      return this.chatMessages.filter(m => m.sessionId === sessionId);
+  public getChatMessages(sessionId?: string, userId?: string): ChatMessage[] {
+    if (sessionId || userId) {
+      return this.chatMessages.filter(m => 
+        (sessionId && m.sessionId === sessionId) || 
+        (userId && m.userId === userId)
+      );
     }
     return this.chatMessages;
   }

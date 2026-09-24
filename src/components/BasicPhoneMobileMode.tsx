@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Calculator, RotateCcw, Check, Sparkles, AlertCircle, ArrowDownRight, TrendingUp, ShieldCheck } from 'lucide-react';
+import { 
+  Smartphone, 
+  RotateCcw, 
+  Check, 
+  Sparkles, 
+  AlertCircle, 
+  ArrowDownRight, 
+  TrendingUp, 
+  Copy, 
+  Delete,
+  CreditCard,
+  Receipt,
+  Percent,
+  ChevronDown
+} from 'lucide-react';
 import { UserSafe } from '../types';
-import { COUNTRIES_DB, getEffectiveCountryFiscal, getAvailableCountryList } from '../data/countries';
+import { getEffectiveCountryFiscal, getAvailableCountryList } from '../data/countries';
 import { canUserSimulate } from '../utils/accessControl';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
-import { NumericInput } from './common/NumericInput';
 import { parseFormattedNumber } from '../utils/numberFormat';
 import { showToast } from '../context/NotificationContext';
 
@@ -24,31 +37,29 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
 }) => {
   const [showExhaustedModal, setShowExhaustedModal] = useState<boolean>(false);
   const [selectedCountry, setSelectedCountry] = useState<string>('AO');
-  const [costInput, setCostInput] = useState<string>('1000');
-  const [marginInput, setMarginInput] = useState<string>('20');
+  
+  // Numeric string currently typed in keypad
+  const [costDigits, setCostDigits] = useState<string>('1500');
+  const [marginPct, setMarginPct] = useState<number>(25);
+  const [customMarginOpen, setCustomMarginOpen] = useState<boolean>(false);
+  const [customMarginVal, setCustomMarginVal] = useState<string>('25');
+  
+  const [vatEnabled, setVatEnabled] = useState<boolean>(true);
   const [vatRate, setVatRate] = useState<number>(14);
-  const [useTpa, setUseTpa] = useState<boolean>(true);
-  const [hasCalculated, setHasCalculated] = useState<boolean>(false);
+  const [tpaEnabled, setTpaEnabled] = useState<boolean>(false);
+  
+  const [activeInput, setActiveInput] = useState<'cost' | 'margin'>('cost');
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
+  const [hasCalculated, setHasCalculated] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [errorMessage]);
-
-  // Calculated snapshot state (only updated on click)
-  const [calculatedState, setCalculatedState] = useState<{
+  // Result state
+  const [result, setResult] = useState<{
     cost: number;
     margin: number;
-    vatRate: number;
-    tpaPercent: number;
     grossSale: number;
     vatAmount: number;
     tpaAmount: number;
-    totalDeductions: number;
     pvpFinal: number;
     netProfit: number;
     netMarginPct: number;
@@ -59,70 +70,110 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
   const availableCountries = getAvailableCountryList(isSuperAdmin);
   const country = getEffectiveCountryFiscal(selectedCountry);
 
-  const formatMoney = (val: number, curr: string = country.curr) => {
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  // Sync default VAT on country change
+  useEffect(() => {
+    const c = getEffectiveCountryFiscal(selectedCountry);
+    setVatRate(c.vatOptions[0]?.r || 14);
+    setHasCalculated(false);
+  }, [selectedCountry]);
+
+  const formatCurrency = (val: number) => {
     return (
       new Intl.NumberFormat('pt-PT', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-      }).format(val) + ` ${curr}`
+      }).format(val) + ` ${country.curr}`
     );
   };
 
-  const handleKeyPadNumber = (num: string) => {
-    setCostInput((prev) => (prev === '0' ? num : prev + num));
-    setHasCalculated(false);
-  };
-
-  const handleKeyPadClear = () => {
-    setCostInput('');
-    setHasCalculated(false);
+  const handleKeyPadPress = (key: string) => {
+    setErrorMessage(null);
+    if (activeInput === 'cost') {
+      if (key === 'C') {
+        setCostDigits('0');
+        setHasCalculated(false);
+        return;
+      }
+      if (key === 'BACKSPACE') {
+        setCostDigits((prev) => (prev.length > 1 ? prev.slice(0, -1) : '0'));
+        setHasCalculated(false);
+        return;
+      }
+      if (key === '00') {
+        if (costDigits !== '0' && costDigits.length < 10) {
+          setCostDigits((prev) => prev + '00');
+          setHasCalculated(false);
+        }
+        return;
+      }
+      if (costDigits === '0') {
+        setCostDigits(key);
+      } else if (costDigits.length < 11) {
+        setCostDigits((prev) => prev + key);
+      }
+      setHasCalculated(false);
+    } else {
+      // Margin edit
+      if (key === 'C') {
+        setCustomMarginVal('0');
+        setMarginPct(0);
+        setHasCalculated(false);
+        return;
+      }
+      if (key === 'BACKSPACE') {
+        const next = customMarginVal.length > 1 ? customMarginVal.slice(0, -1) : '0';
+        setCustomMarginVal(next);
+        setMarginPct(Math.min(99, Math.max(0, parseInt(next) || 0)));
+        setHasCalculated(false);
+        return;
+      }
+      if (key === '00') return;
+      const next = customMarginVal === '0' ? key : (customMarginVal + key).slice(0, 2);
+      const valNum = parseInt(next) || 0;
+      if (valNum < 100) {
+        setCustomMarginVal(next);
+        setMarginPct(valNum);
+        setHasCalculated(false);
+      }
+    }
   };
 
   const handleCalculate = async () => {
     setErrorMessage(null);
-    const cost = parseFormattedNumber(costInput);
-    const margin = parseFormattedNumber(marginInput);
-    const vat = vatRate || 0;
-    const tpaPercent = useTpa ? (country.tpa || 1.0) : 0;
+    const cost = parseFloat(costDigits) || 0;
+    const margin = marginPct;
+    const effectiveVat = vatEnabled ? vatRate : 0;
+    const tpaPercent = tpaEnabled ? (country.tpa || 1.0) : 0;
 
     if (cost <= 0) {
-      setErrorMessage('Por favor introduza um Preço de Custo válido superior a zero.');
-      showToast({
-        type: 'error',
-        title: 'Validação',
-        message: 'Por favor introduza um Preço de Custo válido superior a zero.'
-      });
+      setErrorMessage('Introduza o preço de custo superior a zero.');
+      setActiveInput('cost');
       return;
     }
 
     if (margin < 0 || margin >= 100) {
-      setErrorMessage('A Margem de Lucro deve ser entre 0% e 99%.');
-      showToast({
-        type: 'error',
-        title: 'Validação',
-        message: 'A Margem de Lucro deve ser entre 0% e 99%.'
-      });
+      setErrorMessage('Margem de lucro deve ser entre 0% e 99%.');
       return;
     }
 
-    // AUTH & RBAC SIMULATION CHECK - Allows free demo credits without login
+    // Auth & credits verification
     const simCheck = canUserSimulate(user);
     if (!simCheck.allowed) {
       setErrorMessage(simCheck.message);
-      showToast({
-        type: 'warning',
-        title: 'Limite Atingido',
-        message: simCheck.message
-      });
       setShowExhaustedModal(true);
       return;
     }
 
     setIsCalculating(true);
-
     try {
       let remaining = user?.queriesRemaining ?? 5;
-
       if (user && user.id !== 'visitante_anonimo') {
         try {
           const res = await fetch('/api/simulator/calculate-local', {
@@ -131,11 +182,11 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
             body: JSON.stringify({
               countryCode: selectedCountry,
               costNet: cost,
-              vatRate: vat,
+              vatRate: effectiveVat,
               tpaRate: tpaPercent,
               marginPct: margin,
               fixedFinalPrice: 0,
-              productName: 'Simulação Modo Celular Básico'
+              productName: 'POS Mobile Calculator'
             })
           });
           if (res.ok) {
@@ -147,7 +198,6 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
         } catch {
           remaining = Math.max(0, user.queriesRemaining - 1);
         }
-
         if (onCalculationDone) {
           onCalculationDone(remaining);
         }
@@ -158,325 +208,363 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
         }
       }
 
-      // Mathematical formulas
+      // Mathematical logic
       const grossSale = margin < 100 ? cost / (1 - margin / 100) : cost;
-      const vatAmount = grossSale * (vat / 100);
+      const vatAmount = grossSale * (effectiveVat / 100);
       const pvpFinal = grossSale + vatAmount;
       const tpaAmount = pvpFinal * (tpaPercent / 100);
-      const totalDeductions = vatAmount + tpaAmount;
       const netProfit = pvpFinal - vatAmount - tpaAmount - cost;
       const netMarginPct = pvpFinal > 0 ? (netProfit / pvpFinal) * 100 : 0;
 
-      setCalculatedState({
+      setResult({
         cost,
         margin,
-        vatRate: vat,
-        tpaPercent,
         grossSale,
         vatAmount,
         tpaAmount,
-        totalDeductions,
         pvpFinal,
         netProfit,
         netMarginPct,
         currency: country.curr
       });
-
       setHasCalculated(true);
-      showToast({
-        type: 'success',
-        title: 'Cálculo Concluído',
-        message: 'Preço de venda e margem calculados com sucesso!'
-      });
-    } catch (err) {
-      console.error(err);
-      setErrorMessage('Ocorreu um erro ao processar o cálculo.');
-      showToast({
-        type: 'error',
-        title: 'Erro',
-        message: 'Ocorreu um erro ao processar o cálculo.'
-      });
+    } catch (e) {
+      console.error(e);
+      setErrorMessage('Erro ao calcular. Tente novamente.');
     } finally {
       setIsCalculating(false);
     }
   };
 
+  const copyPvp = () => {
+    if (!result) return;
+    navigator.clipboard.writeText(formatCurrency(result.pvpFinal));
+    showToast({
+      type: 'success',
+      title: 'PVP Copiado',
+      message: `${formatCurrency(result.pvpFinal)} copiado para a área de transferência!`
+    });
+  };
+
+  const quickMargins = [10, 15, 20, 25, 30, 40, 50];
+
   return (
-    <div className="max-w-md mx-auto space-y-4 animate-in fade-in duration-200">
+    <div className="w-full max-w-[360px] sm:max-w-[390px] mx-auto pb-10 select-none animate-in fade-in duration-200">
       
-      {/* Header Compacto */}
-      <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Smartphone className="w-5 h-5" />
+      {/* Outer POS Hardware Casing */}
+      <div className="bg-slate-950 border-2 border-slate-800 rounded-[32px] p-3.5 sm:p-4 shadow-2xl relative overflow-hidden ring-1 ring-white/10">
+        
+        {/* POS Status Bar Header */}
+        <div className="flex items-center justify-between px-2 py-1 mb-2 border-b border-slate-800/80 text-[11px] font-mono text-slate-400">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-bold text-slate-200">POS NANUCLOUD</span>
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-100 font-mono tracking-tight flex items-center gap-2">
-              MODO CELULAR BÁSICO & POS
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-sans">
-                Ultra-Rápido
-              </span>
-            </h2>
-            <p className="text-[11px] text-slate-400">Ideal para teclados físicos, touch rápido e ecrãs pequenos</p>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-slate-200 text-[10px] font-mono rounded px-1.5 py-0.5 focus:outline-none focus:border-indigo-500"
+            >
+              {availableCountries.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} ({c.curr})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <select
-          value={selectedCountry}
-          onChange={(e) => {
-            const code = e.target.value;
-            setSelectedCountry(code);
-            const c = getEffectiveCountryFiscal(code);
-            setVatRate(c.vatOptions[0]?.r || 14);
-            setHasCalculated(false);
-          }}
-          className="bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-slate-200 py-1 px-2 focus:outline-none focus:border-indigo-500"
-        >
-          {availableCountries.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.code} - {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Error Feedback */}
-      {errorMessage && (
-        <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs font-mono flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
-
-      {/* Painel de Resultados: EXCLUSIVO APÓS CLICAR EM CALCULAR */}
-      {hasCalculated && calculatedState ? (
-        <div className="bg-gradient-to-br from-emerald-950/70 via-slate-900 to-indigo-950/70 border-2 border-emerald-500/50 rounded-2xl p-5 shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider flex items-center gap-1 font-bold">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Resultado Apurado
-            </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              1 Crédito Utilizado
-            </span>
-          </div>
-
-          {/* PVP Final Recomendado */}
-          <div className="text-center my-3 bg-slate-900/60 p-4 rounded-xl border border-emerald-500/30">
-            <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider block mb-1">
-              PVP FINAL RECOMENDADO (COM IVA)
-            </span>
-            <div className="text-3xl sm:text-4xl font-extrabold text-emerald-400 font-mono tracking-tight">
-              {formatMoney(calculatedState.pvpFinal, calculatedState.currency)}
-            </div>
-            <div className="text-[11px] text-slate-400 font-mono mt-1">
-              Base de Incidência Comercial: {formatMoney(calculatedState.grossSale, calculatedState.currency)}
-            </div>
-          </div>
-
-          {/* DEDUÇÃO & LUCRO LÍQUIDO (Conforme Solicitado pelo Usuário) */}
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            
-            {/* Bloco 1: Deduções Fiscais e Operacionais */}
-            <div className="bg-slate-900/80 border border-rose-500/30 rounded-xl p-3">
-              <div className="flex items-center gap-1.5 text-rose-400 text-xs font-mono font-bold mb-2">
-                <ArrowDownRight className="w-4 h-4" />
-                <span>DEDUÇÕES TOTAIS</span>
-              </div>
-              <div className="text-lg font-bold text-rose-300 font-mono">
-                - {formatMoney(calculatedState.totalDeductions, calculatedState.currency)}
-              </div>
-              <div className="mt-2 space-y-1 text-[10px] font-mono text-slate-400 border-t border-slate-800 pt-2">
-                <div className="flex justify-between">
-                  <span>Dedução IVA ({calculatedState.vatRate}%):</span>
-                  <span className="text-slate-300 font-bold">{formatMoney(calculatedState.vatAmount, calculatedState.currency)}</span>
-                </div>
-                {calculatedState.tpaPercent > 0 && (
-                  <div className="flex justify-between">
-                    <span>Dedução TPA ({calculatedState.tpaPercent}%):</span>
-                    <span className="text-slate-300 font-bold">{formatMoney(calculatedState.tpaAmount, calculatedState.currency)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Bloco 2: Lucro Líquido Real */}
-            <div className="bg-slate-900/80 border border-emerald-500/30 rounded-xl p-3">
-              <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-mono font-bold mb-2">
-                <TrendingUp className="w-4 h-4" />
-                <span>LUCRO LÍQUIDO</span>
-              </div>
-              <div className="text-lg font-bold text-emerald-300 font-mono">
-                + {formatMoney(calculatedState.netProfit, calculatedState.currency)}
-              </div>
-              <div className="mt-2 space-y-1 text-[10px] font-mono text-slate-400 border-t border-slate-800 pt-2">
-                <div className="flex justify-between">
-                  <span>Margem Líquida Real:</span>
-                  <span className="text-emerald-400 font-bold">{calculatedState.netMarginPct.toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Custo Base:</span>
-                  <span className="text-slate-300 font-bold">{formatMoney(calculatedState.cost, calculatedState.currency)}</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400 text-[11px]">Simulação apurada com sucesso</span>
+        {/* POS Digital LCD Screen */}
+        <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 shadow-inner space-y-2.5">
+          
+          {/* Main Display: Custo vs Margem Tabs */}
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => setHasCalculated(false)}
-              className="text-indigo-400 hover:text-indigo-300 text-xs font-bold underline"
+              onClick={() => setActiveInput('cost')}
+              className={`p-2 rounded-xl text-left transition border ${
+                activeInput === 'cost'
+                  ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 ring-1 ring-emerald-500/30'
+                  : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
             >
-              Ajustar Parâmetros
+              <span className="text-[9px] font-mono uppercase block text-slate-400">Preço de Custo</span>
+              <span className="text-base sm:text-lg font-mono font-bold block truncate text-slate-100">
+                {new Intl.NumberFormat('pt-PT').format(parseFloat(costDigits) || 0)} {country.curr}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveInput('margin')}
+              className={`p-2 rounded-xl text-left transition border ${
+                activeInput === 'margin'
+                  ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-300 ring-1 ring-indigo-500/30'
+                  : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span className="text-[9px] font-mono uppercase block text-slate-400">Margem Lucro</span>
+              <span className="text-base sm:text-lg font-mono font-bold block text-indigo-400">
+                {marginPct}%
+              </span>
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="bg-[#1E293B]/60 border border-dashed border-slate-700 rounded-2xl p-6 text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
-            <Calculator className="w-6 h-6" />
-          </div>
-          <h3 className="text-sm font-bold text-slate-200 font-mono">Simulador Aguardando Cálculo</h3>
-          <p className="text-xs text-slate-400 font-mono max-w-xs mx-auto">
-            Defina o custo e a margem abaixo e clique em <strong>"Calcular Simulação"</strong> para apurar o PVP, as deduções e o lucro líquido.
-          </p>
-        </div>
-      )}
 
-      {/* Quick Input Controls */}
-      <div className="bg-[#1E293B] border border-slate-800 rounded-2xl p-4 space-y-4">
-        
-        {/* Preço de Custo */}
-        <div>
-          <label className="text-xs font-mono font-bold text-slate-300 block mb-1.5 flex justify-between">
-            <span>PREÇO DE CUSTO BASE ({country.curr})</span>
-            <span className="text-[10px] text-indigo-400">Insira ou use o teclado</span>
-          </label>
-          <NumericInput
-            value={costInput}
-            onChange={(val) => {
-              setCostInput(val);
-              setHasCalculated(false);
-            }}
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-lg font-mono font-bold text-white text-center focus:border-emerald-500 focus:outline-none"
-            placeholder="0,000"
-          />
-        </div>
-
-        {/* Quick Margin Selector Buttons */}
-        <div>
-          <label className="text-xs font-mono font-bold text-slate-300 block mb-1.5">
-            MARGEM DE LUCRO DESEJADA (%)
-          </label>
-          <div className="grid grid-cols-4 gap-2">
-            {[10, 20, 30, 40].map((m) => (
+          {/* Quick Margin Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+            {quickMargins.map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => {
-                  setMarginInput(String(m));
+                  setMarginPct(m);
+                  setCustomMarginVal(String(m));
                   setHasCalculated(false);
                 }}
-                className={`py-2 px-1 rounded-xl text-xs font-mono font-bold transition-all ${
-                  marginInput === String(m)
-                    ? 'bg-indigo-500 text-white shadow-md'
-                    : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                className={`py-1 px-2 rounded-lg text-[10px] font-mono font-bold shrink-0 transition ${
+                  marginPct === m
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
                 }`}
               >
                 {m}%
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Quick Tax & TPA Toggle */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <div>
-            <label className="text-[10px] font-mono text-slate-400 block mb-1">REGIME DE IVA</label>
-            <select
-              value={vatRate}
-              onChange={(e) => {
-                setVatRate(Number(e.target.value));
-                setHasCalculated(false);
-              }}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono text-slate-200 py-2 px-2 focus:outline-none focus:border-indigo-500"
-            >
-              {country.vatOptions.map((opt, i) => (
-                <option key={i} value={opt.r}>
-                  {opt.n}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[10px] font-mono text-slate-400 block mb-1">TAXA TPA ({country.tpa}%)</label>
+          {/* Quick Toggles: IVA and TPA Card Fee */}
+          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800 text-[10px] font-mono">
             <button
               type="button"
               onClick={() => {
-                setUseTpa(!useTpa);
+                setVatEnabled(!vatEnabled);
                 setHasCalculated(false);
               }}
-              className={`w-full py-2 px-3 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-colors border ${
-                useTpa
-                  ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                  : 'bg-slate-900 text-slate-400 border-slate-700'
+              className={`p-1.5 rounded-lg border flex items-center justify-between transition ${
+                vatEnabled
+                  ? 'bg-indigo-950/40 border-indigo-500/40 text-indigo-300'
+                  : 'bg-slate-950 border-slate-800 text-slate-400'
               }`}
             >
-              {useTpa ? <Check className="w-3.5 h-3.5" /> : null}
-              {useTpa ? 'Ativo (1%)' : 'Sem TPA'}
+              <span>IVA ({vatRate}%)</span>
+              <span className={`w-3.5 h-3.5 rounded flex items-center justify-center ${vatEnabled ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-transparent'}`}>
+                ✓
+              </span>
             </button>
-          </div>
-        </div>
 
-        {/* Virtual On-Screen Numpad for Touch / Analog simulation */}
-        <div className="pt-2 border-t border-slate-800">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-mono text-slate-400">TECLADO NUMÉRICO RÁPIDO</span>
             <button
               type="button"
-              onClick={handleKeyPadClear}
-              className="text-[10px] text-rose-400 hover:text-rose-300 font-mono flex items-center gap-1"
+              onClick={() => {
+                setTpaEnabled(!tpaEnabled);
+                setHasCalculated(false);
+              }}
+              className={`p-1.5 rounded-lg border flex items-center justify-between transition ${
+                tpaEnabled
+                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+                  : 'bg-slate-950 border-slate-800 text-slate-400'
+              }`}
             >
-              <RotateCcw className="w-3 h-3" /> Limpar
+              <span>TPA ({country.tpa || 1}%)</span>
+              <span className={`w-3.5 h-3.5 rounded flex items-center justify-center ${tpaEnabled ? 'bg-amber-500 text-white' : 'bg-slate-800 text-transparent'}`}>
+                ✓
+              </span>
             </button>
           </div>
-          
-          <div className="grid grid-cols-3 gap-2 font-mono">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', '000'].map((digit) => (
-              <button
-                key={digit}
-                type="button"
-                onClick={() => handleKeyPadNumber(digit)}
-                className="h-11 bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-base font-bold rounded-xl border border-slate-700/80 active:scale-95 transition-all flex items-center justify-center"
-              >
-                {digit}
-              </button>
-            ))}
+
+          {/* Error notice if present */}
+          {errorMessage && (
+            <div className="p-2 bg-rose-500/10 border border-rose-500/30 rounded-lg text-rose-300 text-[11px] font-mono flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+              <span className="truncate">{errorMessage}</span>
+            </div>
+          )}
+
+          {/* Result Block: Only shown after calculation */}
+          {hasCalculated && result ? (
+            <div className="bg-gradient-to-b from-slate-950 to-slate-900 border-2 border-emerald-500/50 rounded-xl p-3 space-y-2 animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" /> PVP Final Venda
+                </span>
+                <button
+                  type="button"
+                  onClick={copyPvp}
+                  className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-mono cursor-pointer"
+                  title="Copiar PVP"
+                >
+                  <Copy className="w-3 h-3" /> Copiar
+                </button>
+              </div>
+
+              <div className="text-center py-1 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
+                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-300 font-mono tracking-tight">
+                  {formatCurrency(result.pvpFinal)}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono pt-1 border-t border-slate-800">
+                <div className="bg-slate-950/70 p-1.5 rounded border border-slate-800">
+                  <span className="text-slate-400 block">Lucro Líquido:</span>
+                  <span className="text-emerald-400 font-bold text-xs">
+                    +{formatCurrency(result.netProfit)}
+                  </span>
+                </div>
+                <div className="bg-slate-950/70 p-1.5 rounded border border-slate-800">
+                  <span className="text-slate-400 block">Margem Real:</span>
+                  <span className="text-indigo-300 font-bold text-xs">
+                    {result.netMarginPct.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Only show tax deduction if active */}
+              {(result.vatAmount > 0 || result.tpaAmount > 0) && (
+                <div className="flex justify-between text-[9px] font-mono text-slate-400 pt-0.5 px-1">
+                  {result.vatAmount > 0 && (
+                    <span>IVA ({vatRate}%): {formatCurrency(result.vatAmount)}</span>
+                  )}
+                  {result.tpaAmount > 0 && (
+                    <span>TPA: {formatCurrency(result.tpaAmount)}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+        </div>
+
+        {/* POS Tactile Numpad */}
+        <div className="pt-3">
+          <div className="grid grid-cols-4 gap-2 font-mono">
+            {/* Row 1 */}
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('7')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              7
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('8')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              8
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('9')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              9
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('BACKSPACE')}
+              className="h-12 rounded-xl bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 border border-rose-800/40 active:scale-95 transition flex items-center justify-center"
+              title="Apagar"
+            >
+              <Delete className="w-5 h-5" />
+            </button>
+
+            {/* Row 2 */}
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('4')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              4
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('5')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              5
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('6')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              6
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('C')}
+              className="h-12 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 active:scale-95 transition"
+            >
+              LIMPAR
+            </button>
+
+            {/* Row 3 */}
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('1')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              1
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('2')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              2
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('3')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              3
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveInput(activeInput === 'cost' ? 'margin' : 'cost')}
+              className="h-12 rounded-xl bg-indigo-950/50 hover:bg-indigo-900/60 text-indigo-300 text-xs font-bold border border-indigo-700/40 active:scale-95 transition flex items-center justify-center gap-1"
+            >
+              <Percent className="w-3.5 h-3.5" />
+              <span>{activeInput === 'cost' ? 'MARGEM' : 'CUSTO'}</span>
+            </button>
+
+            {/* Row 4 */}
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('0')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-lg font-bold border border-slate-800 active:scale-95 transition"
+            >
+              0
+            </button>
+            <button
+              type="button"
+              onClick={() => handleKeyPadPress('00')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-sm font-bold border border-slate-800 active:scale-95 transition"
+            >
+              00
+            </button>
+            <button
+              type="button"
+              onClick={handleCalculate}
+              disabled={isCalculating}
+              className="col-span-2 h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white text-sm font-extrabold shadow-lg transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <span>{isCalculating ? 'A CALCULAR...' : '= CALCULAR'}</span>
+            </button>
           </div>
         </div>
 
-        {/* BOTÃO PRINCIPAL DE CALCULAR (OBRIGATÓRIO PARA DEBITAR CRÉDITO & APRESENTAR RESULTADOS) */}
-        <button
-          type="button"
-          onClick={handleCalculate}
-          disabled={isCalculating}
-          className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.98] text-white rounded-xl text-sm font-mono font-bold transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          <Calculator className="w-4 h-4" />
-          <span>{isCalculating ? 'A Calcular Simulação...' : 'CALCULAR SIMULAÇÃO'}</span>
-        </button>
-
       </div>
 
-      {/* Lembrete de Apoio & Aviso Legal Oficial */}
-      <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-center text-[10px] text-slate-400 font-mono leading-relaxed">
-        <strong>Aviso Legal Nanucloud:</strong> A utilização deste aplicativo tem caráter meramente informativo e estimativo, não dispensando a consulta de um profissional de contas ou contabilista certificado.
-      </div>
+      {/* Discretely placed footer notes & legal disclaimer outside the calculator screen */}
+      <footer className="mt-4 px-3 text-center text-[10px] text-slate-500 font-mono leading-tight space-y-1">
+        <p>📱 Calculadora POS Otimizada para Teclado Táctil de Smartphones</p>
+        <p>Aviso: Cálculos de caráter estimativo, não substituem consultoria contabilística.</p>
+      </footer>
 
-      {/* Exhausted Credits Modal - Prompts user to buy plan, then login */}
+      {/* Modal for exhausted credits */}
       <ExhaustedCreditsModal
         isOpen={showExhaustedModal}
         onClose={() => setShowExhaustedModal(false)}

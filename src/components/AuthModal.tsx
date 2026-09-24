@@ -254,9 +254,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // 6. Social Login Action Trigger
   const triggerSocialAuth = (provider: 'google' | 'facebook') => {
     setSocialProvider(provider);
-    setSocialEmail(provider === 'google' ? 'utilizador@gmail.com' : 'cliente@facebook.com');
-    setSocialName(provider === 'google' ? 'Conta Google' : 'Utilizador Facebook');
-    setSocialCompany('Empresa Comercial ' + (provider === 'google' ? 'Google' : 'Facebook'));
+    setSocialEmail('');
+    setSocialName('');
+    setSocialCompany('');
     setSocialModalOpen(true);
   };
 
@@ -309,11 +309,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-mono font-bold text-white tracking-wide">
-                Autenticação NANUCLOUD
+                Autenticação
               </h2>
-              <p className="text-[11px] text-slate-400 font-mono">
-                Acesso seguro com criptografia Bcrypt e verificação em tempo real
-              </p>
             </div>
           </div>
           <button
@@ -384,16 +381,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             
             {/* Quick Social Registration/Login (Google & Facebook) */}
             {(clientMode === 'login' || clientMode === 'register') && (
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono font-semibold text-slate-300 uppercase tracking-wider">
-                    Cadastro Rápido de Cliente
-                  </span>
-                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-mono font-bold">
-                    +10 Créditos Grátis
-                  </span>
-                </div>
-
+              <div className="space-y-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {/* Google Button */}
                   <button
@@ -508,7 +496,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={clientEmailOrNif}
                     onChange={(e) => setClientEmailOrNif(e.target.value)}
-                    placeholder="ex: comercial@empresa.ao ou 5412093847"
+                    placeholder="Email ou NIF"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition"
                   />
                 </div>
@@ -536,7 +524,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={clientPassword}
                     onChange={(e) => setClientPassword(e.target.value)}
-                    placeholder="Introduza a sua palavra-passe"
+                    placeholder="Palavra-passe"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition"
                   />
                 </div>
@@ -550,7 +538,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <span>Entrar na Minha Conta</span>
+                      <span>Entrar</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -571,7 +559,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       required
                       value={regCompanyName}
                       onChange={(e) => setRegCompanyName(e.target.value)}
-                      placeholder="ex: Luanda Comercial Lda"
+                      placeholder="Razão Social"
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -585,7 +573,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       required
                       value={regNif}
                       onChange={(e) => setRegNif(e.target.value)}
-                      placeholder="ex: 5419082341"
+                      placeholder="NIF"
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -600,7 +588,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="text"
                       value={regName}
                       onChange={(e) => setRegName(e.target.value)}
-                      placeholder="ex: João Manuel Silva"
+                      placeholder="Nome do Responsável"
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -634,7 +622,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       required
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="comercial@empresa.ao"
+                      placeholder="Email"
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -647,32 +635,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="tel"
                       value={regPhone}
                       onChange={(e) => setRegPhone(e.target.value)}
-                      placeholder="+244 923 000 000"
+                      placeholder="Telefone / WhatsApp"
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] font-mono text-slate-300 flex items-center gap-1">
-                      <Lock className="w-3 h-3 text-slate-400" /> Palavra-passe de Acesso *
-                    </label>
-                    <span className="text-[10px] text-indigo-400 font-mono">
-                      Criptografia Bcrypt (Salt 10)
-                    </span>
-                  </div>
+                  <label className="block text-[11px] font-mono text-slate-300 mb-1 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-slate-400" /> Palavra-passe *
+                  </label>
                   <input
                     type="password"
                     required
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres (ex: SenhaSegura2026)"
+                    placeholder="Palavra-passe (mínimo 6 caracteres)"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                   />
-                  <p className="text-[10px] text-slate-400 font-mono mt-1">
-                    🔒 A sua senha será encriptada e guardada com segurança na tabela <code className="text-indigo-300">users</code> da base de dados.
-                  </p>
                 </div>
 
                 <button
@@ -695,16 +675,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             {/* 3. Forgot Password - Request OTP Form */}
             {clientMode === 'forgot_password' && (
               <form onSubmit={handleRequestOtp} className="space-y-4">
-                <div className="bg-indigo-500/10 border border-indigo-500/20 p-3.5 rounded-xl text-xs font-mono text-indigo-300">
-                  <div className="flex items-center gap-2 font-bold mb-1">
-                    <KeyRound className="w-4 h-4 text-indigo-400" />
-                    <span>Recuperação e Reposição de Palavra-passe</span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
-                    Introduza o Email ou NIF da sua empresa cadastrada. Geraremos um código OTP de verificação de 6 dígitos para validar a sua identidade.
-                  </p>
-                </div>
-
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-slate-400" /> Email ou NIF Registado
@@ -714,7 +684,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={resetIdentifier}
                     onChange={(e) => setResetIdentifier(e.target.value)}
-                    placeholder="ex: comercial@empresa.ao ou 5412093847"
+                    placeholder="Email ou NIF"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -729,7 +699,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      <span>Enviar Código de 6 Dígitos</span>
+                      <span>Enviar Código de Verificação</span>
                     </>
                   )}
                 </button>
@@ -779,7 +749,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Nova Palavra-passe"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -793,7 +763,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repita a nova palavra-passe"
+                    placeholder="Confirmar Nova Palavra-passe"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -808,7 +778,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>Atualizar Palavra-passe na Base de Dados</span>
+                      <span>Atualizar Palavra-passe</span>
                     </>
                   )}
                 </button>
@@ -823,47 +793,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* ================================================================= */}
         {activeTab === 'admin' && (
           <div className="p-6 space-y-5">
-            <div className="bg-cyan-500/10 border border-cyan-500/20 p-3.5 rounded-xl text-xs font-mono text-cyan-300">
-              <div className="flex items-center gap-2 font-bold mb-1">
-                <Shield className="w-4 h-4 text-cyan-400" />
-                <span>Portal de Administração do Sistema</span>
-              </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                Acesso restrito para administradores ativos. Gestão central de aprovação de pagamentos, chat de suporte, tabela de preços e auditoria de segurança.
-              </p>
-            </div>
-
             <form onSubmit={handleAdminLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1.5 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-slate-400" /> Email Administrativo
+                  <Mail className="w-3.5 h-3.5 text-slate-400" /> Email
                 </label>
                 <input
                   type="email"
                   required
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="admin@nanucloud.com"
+                  placeholder="Email"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1.5 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-slate-400" /> Palavra-passe Administrativa
+                  <Lock className="w-3.5 h-3.5 text-slate-400" /> Palavra-passe
                 </label>
                 <input
                   type="password"
                   required
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Introduza a sua palavra-passe de gestor"
+                  placeholder="Palavra-passe"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition"
                 />
-              </div>
-
-              <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-[11px] font-mono text-slate-400">
-                🛡️ <span className="text-slate-300 font-semibold">Segurança Reforçada:</span> Apenas contas com estado ativo e perfil administrativo registadas na tabela <code className="text-cyan-300">users</code> têm permissão de acesso.
               </div>
 
               <button
@@ -876,7 +832,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 ) : (
                   <>
                     <Shield className="w-4 h-4" />
-                    <span>Entrar na Área de Gestão Administrativa</span>
+                    <span>Entrar</span>
                   </>
                 )}
               </button>
@@ -911,15 +867,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSocialModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            <p className="text-xs font-mono text-slate-300">
-              O seu perfil será automaticamente inscrito e ativado na base de dados com 10 créditos de boas-vindas:
-            </p>
 
             <form onSubmit={handleConfirmSocialAuth} className="space-y-3">
               <div>
