@@ -41,16 +41,38 @@ export const NumericInput: React.FC<NumericInputProps> = ({
       setDisplayValue('');
       return;
     }
-    const strVal = String(value);
-    // Se já tiver formato português com vírgula ou já estiver formatado
-    if (strVal.includes(',') || strVal.includes('.')) {
-      setDisplayValue(strVal);
+    if (typeof value === 'number') {
+      const currentParsed = parseFormattedNumber(displayValue);
+      // Se já coincidir numericamente com o que está no display, evitar reformatar durante a digitação
+      if (currentParsed === value && displayValue !== '') {
+        return;
+      }
+      setDisplayValue(formatPtNumber(value, maxDecimals, false));
     } else {
-      const num = parseFormattedNumber(strVal);
-      if (num === 0 && strVal !== '0') {
+      const strVal = String(value);
+      // Se coincidir exatamente com o que já está a ser mostrado, não alterar
+      if (strVal === displayValue) return;
+
+      // Se terminar com vírgula ou ponto (digitação de casa decimal em curso)
+      if (strVal.endsWith(',') || strVal.endsWith('.')) {
+        setDisplayValue(strVal.replace('.', ','));
+        return;
+      }
+
+      // Se contiver vírgula (já em formato PT/AO com decimais)
+      if (strVal.includes(',')) {
         setDisplayValue(strVal);
-      } else {
+      } else if (strVal.includes('.')) {
+        // Formato com ponto: formatar com vírgula decimal
+        const num = parseFormattedNumber(strVal);
         setDisplayValue(formatPtNumber(num, maxDecimals, false));
+      } else {
+        const num = parseFormattedNumber(strVal);
+        if (num === 0 && strVal !== '0') {
+          setDisplayValue(strVal);
+        } else {
+          setDisplayValue(formatPtNumber(num, maxDecimals, false));
+        }
       }
     }
   }, [value, maxDecimals]);
@@ -63,7 +85,7 @@ export const NumericInput: React.FC<NumericInputProps> = ({
       return;
     }
 
-    // Permite digitação com dígitos, ponto de milhar e vírgula decimal
+    // Permite digitação com dígitos, ponto de milhar e vírgula/ponto decimal
     const formatted = formatLiveInput(raw, maxDecimals);
     setDisplayValue(formatted);
     onChange(formatted, formatted);
@@ -71,6 +93,15 @@ export const NumericInput: React.FC<NumericInputProps> = ({
 
   const handleBlur = () => {
     if (!displayValue.trim()) return;
+
+    // Se terminar com vírgula pendente (ex: "14,"), limpar para "14"
+    if (displayValue.endsWith(',')) {
+      const cleaned = displayValue.slice(0, -1);
+      setDisplayValue(cleaned);
+      onChange(cleaned, cleaned);
+      return;
+    }
+
     const num = parseFormattedNumber(displayValue);
     if (isNaN(num)) return;
 

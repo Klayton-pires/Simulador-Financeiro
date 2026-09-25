@@ -124,8 +124,10 @@ export const CornerMenu: React.FC<CornerMenuProps> = ({
   }, [isOpen]);
 
   const allModules: CornerMenuItem[] = [
-    // Análise Financeira & Gráficos
-    { id: 'analytics_dashboard', label: 'Dashboard de Análise Financeira', category: 'Inteligência & Análise', icon: BarChart3, unlocked: true },
+    // Análise Financeira & Gráficos (Exclusivo para Gestores)
+    ...(isManager ? [
+      { id: 'analytics_dashboard', label: 'Dashboard Financeiro (Gestores)', category: 'Inteligência & Análise', icon: BarChart3, unlocked: true }
+    ] : []),
 
     // Simuladores & Motor
     { id: 'local', label: 'Vendas & Comércio (PVP)', category: 'Simuladores', icon: Store, unlocked: true },
@@ -150,7 +152,19 @@ export const CornerMenu: React.FC<CornerMenuProps> = ({
   const categories = Array.from(new Set(allModules.map((m) => m.category)));
 
   const handleSelectModule = (id: string) => {
-    onTabChange(id as ActiveTab);
+    if (id === 'history') {
+      if (user?.role === 'client' && onOpenClientProfile) {
+        onOpenClientProfile();
+      } else if (isManager) {
+        onTabChange('analytics_dashboard');
+      } else if (onOpenClientProfile) {
+        onOpenClientProfile();
+      } else {
+        onTabChange('local');
+      }
+    } else {
+      onTabChange(id as ActiveTab);
+    }
     closeMenu();
   };
 

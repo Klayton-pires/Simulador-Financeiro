@@ -66,7 +66,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
 
   const [countryCode, setCountryCode] = useState<string>('AO');
   const [vatRate, setVatRate] = useState<number>(14);
-  const [tpaRate, setTpaRate] = useState<number>(0);
+  const [tpaRate, setTpaRate] = useState<string | number>('0');
   const [costNet, setCostNet] = useState<string>('');
   const [costGross, setCostGross] = useState<string>('');
   const [marginPct, setMarginPct] = useState<string>('25');
@@ -425,8 +425,8 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
     const extras = extraBreakdown || getEffectiveExtraCosts();
 
     // Determine base merchandise cost (handling per-box vs lot-total when bulk is enabled)
-    const bQty = Math.max(1, parseFormattedNumber(bulkQuantity) || 1);
-    const rUnitsPerB = Math.max(1, parseFormattedNumber(retailUnitsPerBulk) || 1);
+    const bQty = Math.max(0.001, parseFormattedNumber(bulkQuantity) || 1);
+    const rUnitsPerB = Math.max(0.001, parseFormattedNumber(retailUnitsPerBulk) || 1);
     const totalRetailUnits = enableBulkRetail ? (bQty * rUnitsPerB) : 1;
 
     let baseMerchandiseCostNet = cNet;
@@ -655,7 +655,8 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
       }
     }
 
-    if (isNaN(tpaRate) || tpaRate < 0 || tpaRate > 100) {
+    const numTpa = parseFormattedNumber(tpaRate);
+    if (isNaN(numTpa) || numTpa < 0 || numTpa > 100) {
       errors.tpaRate = 'A taxa TPA deve situar-se entre 0% e 100%.';
     }
 
@@ -709,7 +710,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
             countryCode,
             costNet: net,
             vatRate,
-            tpaRate,
+            tpaRate: parseFormattedNumber(tpaRate),
             pricingMode,
             marginPct: mPct,
             fixedFinalPrice: fPrice,
@@ -769,7 +770,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
           0,
           0,
           vatRate,
-          tpaRate,
+          parseFormattedNumber(tpaRate),
           country.ii,
           currentExtras,
           {
@@ -785,7 +786,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
           0,
           fPrice,
           vatRate,
-          tpaRate,
+          parseFormattedNumber(tpaRate),
           country.ii,
           currentExtras,
           {
@@ -801,7 +802,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
           m,
           0,
           vatRate,
-          tpaRate,
+          parseFormattedNumber(tpaRate),
           country.ii,
           currentExtras,
           { mode: 'margin' }
@@ -1259,11 +1260,19 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
             </select>
           </div>
 
-          {/* TPA Card Fee */}
+          {/* TPA Card Fee - Taxa TPA Personalizável */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 font-mono uppercase tracking-wider">
-              {t.lblTpa} {layoutMode === 'friendly' ? '(Opcional)' : '(Padrão 0%)'}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-slate-300 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                <span>{t.lblTpa}</span>
+                <span className="text-[9px] bg-amber-500/15 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded font-normal">
+                  Personalizável
+                </span>
+              </label>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {parseFormattedNumber(tpaRate) > 0 ? `${tpaRate}% aplicado` : '0% (Sem TPA)'}
+              </span>
+            </div>
             <div className="relative">
               <NumericInput
                 value={tpaRate}
@@ -1273,11 +1282,41 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                 }}
                 placeholder="0"
                 maxDecimals={3}
-                className={`w-full bg-[#0F172A] border rounded-lg px-3 py-2 text-xs font-mono focus:border-indigo-500 outline-none transition ${
-                  fieldErrors.tpaRate ? 'border-rose-500 bg-rose-950/20 text-rose-100 ring-2 ring-rose-500/20' : 'border-slate-800 text-slate-100'
+                className={`w-full bg-[#0F172A] border rounded-lg px-3 py-2 text-xs font-mono focus:border-amber-500 outline-none transition ${
+                  fieldErrors.tpaRate ? 'border-rose-500 bg-rose-950/20 text-rose-100 ring-2 ring-rose-500/20' : 'border-slate-800 text-amber-300 font-bold'
                 }`}
               />
-              <span className="absolute right-2.5 top-2 text-xs text-slate-500 font-mono">%</span>
+              <span className="absolute right-2.5 top-2 text-xs text-amber-400 font-mono font-bold">%</span>
+            </div>
+
+            {/* Predefinições Rápidas de TPA */}
+            <div className="flex items-center gap-1 overflow-x-auto pt-0.5 no-scrollbar text-[10px] font-mono">
+              <span className="text-slate-500 text-[9px] uppercase font-bold shrink-0">Predefinições:</span>
+              {[
+                { label: '0% Isento', val: 0 },
+                { label: '0.5%', val: 0.5 },
+                { label: '1.0% EMIS', val: 1.0 },
+                { label: '1.2%', val: 1.2 },
+                { label: '1.5%', val: 1.5 },
+                { label: '2.0%', val: 2.0 },
+                { label: '2.5%', val: 2.5 }
+              ].map((p) => (
+                <button
+                  key={p.val}
+                  type="button"
+                  onClick={() => {
+                    setTpaRate(p.val === 0 ? '0' : p.val.toString().replace('.', ','));
+                    clearFieldError('tpaRate');
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 transition cursor-pointer ${
+                    parseFormattedNumber(tpaRate) === p.val
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -2095,7 +2134,7 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
                         }
                       }}
                       className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                        marginPct === preset.toString()
+                        parseFormattedNumber(marginPct) === preset
                           ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/50'
                           : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                       }`}

@@ -26,10 +26,10 @@ export const COUNTRIES_DB: Record<string, CountryFiscalExtended> = {
     agency: 'Autoridade Tributária / Fisco',
     officialPortal: 'https://minfin.gov.ao',
     vatOptions: [
-      { n: 'Geral (14%)', r: 14 },
-      { n: 'Simplificado (7%)', r: 7 },
-      { n: 'Cesta Básica (5%)', r: 5 },
-      { n: 'Isento (0%) - Art. 12º CIVA', r: 0 }
+      { n: 'Regime Geral (14%)', r: 14 },
+      { n: 'Regime Simplificado (7%)', r: 7 },
+      { n: 'Taxa Reduzida Cesta Básica (5%)', r: 5 },
+      { n: 'Regime de Isenção / Exclusão (0%)', r: 0 }
     ],
     ii: 25,
     tpa: 0,
@@ -38,7 +38,7 @@ export const COUNTRIES_DB: Record<string, CountryFiscalExtended> = {
     margins: [10, 20, 30],
     defaultCustomsRate: 10,
     importantNotes: {
-      products: 'Em Angola, a taxa geral de IVA é de 14%. Produtos da cesta básica e insumos agropecuários beneficiam de alíquota reduzida de 5% (Lei 17/23). Margens e taxas de TPA (Multicaixa por padrão 0% ou negociado) incidem no momento da venda.',
+      products: 'Em Angola vigoram os 4 regimes de IVA: Regime de Isenção/Exclusão (0%), Taxa Reduzida para Cesta Básica (5% - Lei 17/23), Regime Simplificado (7% - Art. 53º CIVA) e Regime Geral (14% - Art. 12º CIVA). O Imposto Industrial (II) sobre o lucro comercial é de 25% (Lei 26/20).',
       services: 'Serviços prestados por sujeitos passivos a entidades obrigadas à retenção na fonte estão sujeitos à alíquota de 6.5% do Imposto sobre o Rendimento/Serviços (CIRS/Fisco).',
       importation: 'Despacho Aduaneiro: Os direitos aduaneiros (Pauta Aduaneira) variam de 2% a 50%, acrescidos de 0.5% de Taxa Estatística e 14% de IVA Aduaneiro sobre o Valor CIF aduaneiro.'
     },

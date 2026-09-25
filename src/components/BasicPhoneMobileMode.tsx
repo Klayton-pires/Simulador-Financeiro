@@ -24,6 +24,7 @@ import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
 import { ConfirmSimulationModal, SimulationSummaryItem } from './ConfirmSimulationModal';
 import { showToast } from '../context/NotificationContext';
+import { parseFormattedNumber, formatPtNumber } from '../utils/numberFormat';
 
 export type VatRegimeType = 'geral' | 'simplificado' | 'cesta_basica' | 'isento';
 export type IndustrialTaxRegimeType = 'geral' | 'simplificado' | 'agro' | 'isento';
@@ -56,8 +57,9 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
   // Regimes de Imposto Industrial (Angola: Geral 25%, Simplificado 6.5%, Agro 10%, Isento 0%)
   const [iiRegime, setIiRegime] = useState<IndustrialTaxRegimeType>('geral');
   
-  // TPA Terminal Pagamento Automático (Multicaixa / Cartão)
+  // TPA Terminal Pagamento Automático (Multicaixa / Cartão) - Taxa Personalizável
   const [tpaEnabled, setTpaEnabled] = useState<boolean>(false);
+  const [tpaRate, setTpaRate] = useState<string>('1.0');
   
   const [activeInput, setActiveInput] = useState<'cost' | 'margin'>('cost');
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
@@ -178,9 +180,16 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
         }
         return;
       }
+      if (key === ',' || key === '.') {
+        if (!costDigits.includes(',') && !costDigits.includes('.')) {
+          setCostDigits((prev) => (prev === '0' || !prev ? '0,' : prev + ','));
+          setHasCalculated(false);
+        }
+        return;
+      }
       if (costDigits === '0') {
         setCostDigits(key);
-      } else if (costDigits.length < 11) {
+      } else if (costDigits.length < 12) {
         setCostDigits((prev) => prev + key);
       }
       setHasCalculated(false);
@@ -195,13 +204,22 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
       if (key === 'BACKSPACE') {
         const next = customMarginVal.length > 1 ? customMarginVal.slice(0, -1) : '0';
         setCustomMarginVal(next);
-        setMarginPct(Math.min(99, Math.max(0, parseInt(next) || 0)));
+        setMarginPct(Math.min(99.9, Math.max(0, parseFormattedNumber(next) || 0)));
         setHasCalculated(false);
         return;
       }
       if (key === '00') return;
-      const next = customMarginVal === '0' ? key : (customMarginVal + key).slice(0, 2);
-      const valNum = parseInt(next) || 0;
+      if (key === ',' || key === '.') {
+        if (!customMarginVal.includes(',') && !customMarginVal.includes('.')) {
+          const next = (customMarginVal === '0' || !customMarginVal) ? '0,' : customMarginVal + ',';
+          setCustomMarginVal(next);
+          setMarginPct(parseFormattedNumber(next));
+          setHasCalculated(false);
+        }
+        return;
+      }
+      const next = customMarginVal === '0' ? key : (customMarginVal + key);
+      const valNum = parseFormattedNumber(next);
       if (valNum < 100) {
         setCustomMarginVal(next);
         setMarginPct(valNum);
@@ -213,7 +231,7 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
   // Step 1: User requests simulation -> validates & checks credits -> opens confirmation modal
   const handleRequestCalculate = () => {
     setErrorMessage(null);
-    const cost = parseFloat(costDigits) || 0;
+    const cost = parseFormattedNumber(costDigits);
     const margin = marginPct;
 
     if (cost <= 0) {
@@ -250,11 +268,11 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
     setIsCalculating(true);
     setErrorMessage(null);
 
-    const cost = parseFloat(costDigits) || 0;
+    const cost = parseFormattedNumber(costDigits);
     const margin = marginPct;
     const effectiveVat = getEffectiveVatRate(vatRegime);
     const effectiveIi = getEffectiveIiRate(iiRegime);
-    const tpaPercent = tpaEnabled ? (country.tpa || 1.0) : 0;
+    const tpaPercent = tpaEnabled ? parseFormattedNumber(tpaRate) : 0;
 
     try {
       let remaining = user?.queriesRemaining ?? 0;
@@ -365,7 +383,7 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
 
   const quickMargins = [10, 15, 20, 25, 30, 40, 50];
 
-  const currentCostNum = parseFloat(costDigits) || 0;
+  const currentCostNum = parseFormattedNumber(costDigits);
   const simulationSummaryItems: SimulationSummaryItem[] = [
     {
       label: 'Preço de Custo (Mercadoria)',
@@ -389,7 +407,7 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
     },
     {
       label: 'Taxa Terminal TPA / Multicaixa',
-      value: tpaEnabled ? `${country.tpa || 1.0}%` : 'Desativado (0%)'
+      value: tpaEnabled ? `${tpaRate}% (Personalizado)` : 'Desativado (0%)'
     }
   ];
 
@@ -440,7 +458,7 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
             >
               <span className="text-[9px] font-mono uppercase block text-slate-400">Preço de Custo</span>
               <span className="text-base sm:text-lg font-mono font-bold block truncate text-slate-100">
-                {new Intl.NumberFormat('pt-PT').format(parseFloat(costDigits) || 0)} {country.curr}
+                {costDigits || '0'} {country.curr}
               </span>
             </button>
 
@@ -482,74 +500,83 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
             ))}
           </div>
 
-          {/* 1. REGIMES DE IVA (Geral 14%, Simplificado 7%, Cesta Básica 5%, Isento 0%) */}
+          {/* 1. REGIMES DE IVA DE ANGOLA (0%, 5%, 7% e 14%) */}
           <div className="pt-1.5 border-t border-slate-800/80 space-y-1">
-            <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400 block font-bold">
-              Regime de IVA:
-            </span>
+            <div className="flex items-center justify-between text-[9px] font-mono">
+              <span className="uppercase tracking-wider text-slate-400 font-bold">
+                Regimes de IVA (Angola):
+              </span>
+              <span className="text-indigo-400 font-bold">
+                {getEffectiveVatRate(vatRegime)}% selecionado
+              </span>
+            </div>
             <div className="grid grid-cols-4 gap-1 text-[9px] font-mono">
-              <button
-                type="button"
-                onClick={() => {
-                  setVatRegime('geral');
-                  setHasCalculated(false);
-                }}
-                className={`py-1 px-1 rounded text-center truncate border transition ${
-                  vatRegime === 'geral'
-                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
-                }`}
-                title="Regime Geral de IVA (14%)"
-              >
-                Geral 14%
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setVatRegime('simplificado');
-                  setHasCalculated(false);
-                }}
-                className={`py-1 px-1 rounded text-center truncate border transition ${
-                  vatRegime === 'simplificado'
-                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
-                }`}
-                title="Regime Simplificado de IVA (7%)"
-              >
-                Simpl. 7%
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setVatRegime('cesta_basica');
-                  setHasCalculated(false);
-                }}
-                className={`py-1 px-1 rounded text-center truncate border transition ${
-                  vatRegime === 'cesta_basica'
-                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
-                }`}
-                title="Taxa Reduzida Cesta Básica (5%)"
-              >
-                Básica 5%
-              </button>
-
+              {/* Regime 0% (Isento / Exclusão) */}
               <button
                 type="button"
                 onClick={() => {
                   setVatRegime('isento');
                   setHasCalculated(false);
                 }}
-                className={`py-1 px-1 rounded text-center truncate border transition ${
+                className={`py-1 px-1 rounded text-center truncate border transition cursor-pointer ${
                   vatRegime === 'isento'
-                    ? 'bg-slate-700 text-white border-slate-600 font-bold'
+                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold shadow'
                     : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
                 }`}
-                title="Regime de Exclusão / Isento (0%)"
+                title="Regime de Isenção / Exclusão (0% - Art. 12º CIVA)"
               >
                 Isento 0%
+              </button>
+
+              {/* Regime 5% (Cesta Básica) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setVatRegime('cesta_basica');
+                  setHasCalculated(false);
+                }}
+                className={`py-1 px-1 rounded text-center truncate border transition cursor-pointer ${
+                  vatRegime === 'cesta_basica'
+                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold shadow'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                }`}
+                title="Taxa Reduzida Cesta Básica (5% - Lei 17/23)"
+              >
+                Básica 5%
+              </button>
+
+              {/* Regime 7% (Simplificado) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setVatRegime('simplificado');
+                  setHasCalculated(false);
+                }}
+                className={`py-1 px-1 rounded text-center truncate border transition cursor-pointer ${
+                  vatRegime === 'simplificado'
+                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold shadow'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                }`}
+                title="Regime Simplificado de IVA (7% - Art. 53º CIVA)"
+              >
+                Simpl. 7%
+              </button>
+
+              {/* Regime 14% (Geral) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setVatRegime('geral');
+                  setHasCalculated(false);
+                }}
+                className={`py-1 px-1 rounded text-center truncate border transition cursor-pointer ${
+                  vatRegime === 'geral'
+                    ? 'bg-indigo-600 text-white border-indigo-500 font-bold shadow'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                }`}
+                title="Regime Geral de IVA (14% - Art. 12º CIVA)"
+              >
+                Geral 14%
               </button>
             </div>
           </div>
@@ -626,25 +653,72 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
             </div>
           </div>
 
-          {/* 3. TPA Multicaixa / Taxa de Cartão */}
-          <div className="pt-1 border-t border-slate-800 text-[10px] font-mono">
-            <button
-              type="button"
-              onClick={() => {
-                setTpaEnabled(!tpaEnabled);
-                setHasCalculated(false);
-              }}
-              className={`w-full p-1.5 rounded-lg border flex items-center justify-between transition ${
-                tpaEnabled
-                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
-                  : 'bg-slate-950 border-slate-800 text-slate-400'
-              }`}
-            >
-              <span>Terminal TPA Multicaixa ({country.tpa || 1}%)</span>
-              <span className={`w-3.5 h-3.5 rounded flex items-center justify-center ${tpaEnabled ? 'bg-amber-500 text-white' : 'bg-slate-800 text-transparent'}`}>
-                ✓
-              </span>
-            </button>
+          {/* 3. TPA Multicaixa / Taxa de Cartão - Taxa Totalmente Personalizável */}
+          <div className="pt-1.5 border-t border-slate-800 space-y-1.5 text-[10px] font-mono">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setTpaEnabled(!tpaEnabled);
+                  setHasCalculated(false);
+                }}
+                className={`p-1.5 rounded-lg border flex items-center justify-between transition cursor-pointer flex-1 mr-2 ${
+                  tpaEnabled
+                    ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+                    : 'bg-slate-950 border-slate-800 text-slate-400'
+                }`}
+              >
+                <span>Terminal TPA Multicaixa</span>
+                <span className={`w-3.5 h-3.5 rounded flex items-center justify-center text-xs font-bold ${tpaEnabled ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-transparent'}`}>
+                  ✓
+                </span>
+              </button>
+
+              {/* Taxa Personalizada do TPA */}
+              {tpaEnabled && (
+                <div className="flex items-center gap-1 bg-slate-950 border border-amber-500/30 rounded-lg px-2 py-1">
+                  <span className="text-[9px] text-amber-400 font-bold uppercase">Taxa:</span>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    max="20"
+                    value={tpaRate}
+                    onChange={(e) => {
+                      setTpaRate(e.target.value);
+                      setHasCalculated(false);
+                    }}
+                    className="w-12 bg-transparent text-amber-300 font-bold text-center outline-none text-xs"
+                    title="Defina a taxa negociada com o banco / EMIS (Ex: 1.0%, 1.2%, 1.5%)"
+                  />
+                  <span className="text-amber-400 font-bold">%</span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick TPA presets if enabled */}
+            {tpaEnabled && (
+              <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
+                <span className="text-[9px] text-slate-500 uppercase font-bold shrink-0">Predefinições:</span>
+                {['0.5', '1.0', '1.2', '1.5', '2.0'].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      setTpaRate(preset);
+                      setHasCalculated(false);
+                    }}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 transition cursor-pointer ${
+                      tpaRate === preset
+                        ? 'bg-amber-500 text-slate-950 shadow'
+                        : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    {preset}%
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Error notice if present */}
@@ -825,10 +899,11 @@ export const BasicPhoneMobileMode: React.FC<BasicPhoneMobileModeProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => handleKeyPadPress('00')}
-              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-slate-100 text-sm font-bold border border-slate-800 active:scale-95 transition"
+              onClick={() => handleKeyPadPress(',')}
+              className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-indigo-600 text-amber-400 text-xl font-bold border border-slate-800 active:scale-95 transition flex items-center justify-center cursor-pointer"
+              title="Separador Decimal (,)"
             >
-              00
+              ,
             </button>
             
             {/* CALCULATE & CONFIRM BUTTON */}

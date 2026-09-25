@@ -15,6 +15,7 @@ import {
 import { NanuCloudLogo } from './NanuCloudLogo';
 import { useLayoutMode } from '../data/layoutMode';
 import { useAuth } from '../context/AuthContext';
+import { isManagerOrAdmin } from '../utils/accessControl';
 
 interface NavbarProps {
   currentLang: SupportedLang;
@@ -217,13 +218,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Dashboard Financeiro Button */}
-          {onOpenAnalytics && (
+          {/* Dashboard Financeiro Button - Exclusivo para Gestores */}
+          {onOpenAnalytics && (isAdmin || isManagerOrAdmin(currentUser?.role)) && (
             <button
               type="button"
               onClick={onOpenAnalytics}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-indigo-300 border border-white/[0.08] hover:border-indigo-500/40 text-xs font-medium transition cursor-pointer shadow-sm"
-              title="Abrir Dashboard de Análise Financeira (Volume de Vendas e Simulações)"
+              title="Abrir Dashboard de Análise Financeira (Exclusivo para Gestores)"
             >
               <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
               <span className="hidden md:inline">Analytics</span>

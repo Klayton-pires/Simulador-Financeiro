@@ -13,6 +13,7 @@ import {
 import { UserSafe } from '../types';
 import { COUNTRIES_DB, CountryFiscalConfig, getActiveCountriesDb, saveCustomFiscalMatrix } from '../data/countries';
 import { hasUserPermission } from '../data/permissions';
+import { parseFormattedNumber } from '../utils/numberFormat';
 
 interface ManualFiscalMatrixTabProps {
   currentUser: UserSafe;
@@ -151,10 +152,11 @@ export const ManualFiscalMatrixTab: React.FC<ManualFiscalMatrixTabProps> = ({ cu
                         <div className="flex items-center gap-1">
                           <input
                             type="number"
+                            step="any"
                             defaultValue={item.vatOptions[0]?.r || 14}
                             onChange={(e) => {
                               const newOpts = [...item.vatOptions];
-                              if (newOpts[0]) newOpts[0].r = Number(e.target.value);
+                              if (newOpts[0]) newOpts[0].r = parseFormattedNumber(e.target.value);
                               handleCellChange(code, 'vatOptions', newOpts);
                             }}
                             className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-bold text-right"
@@ -170,8 +172,9 @@ export const ManualFiscalMatrixTab: React.FC<ManualFiscalMatrixTabProps> = ({ cu
                         <div className="flex items-center gap-1">
                           <input
                             type="number"
+                            step="any"
                             value={item.retentionServiceRate || 0}
-                            onChange={(e) => handleCellChange(code, 'retentionServiceRate', Number(e.target.value))}
+                            onChange={(e) => handleCellChange(code, 'retentionServiceRate', parseFormattedNumber(e.target.value))}
                             className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-bold text-right"
                           />
                           <span className="text-slate-500">%</span>
@@ -185,9 +188,9 @@ export const ManualFiscalMatrixTab: React.FC<ManualFiscalMatrixTabProps> = ({ cu
                         <div className="flex items-center gap-1">
                           <input
                             type="number"
-                            step="0.1"
+                            step="any"
                             value={item.statisticalTax || 0}
-                            onChange={(e) => handleCellChange(code, 'statisticalTax', Number(e.target.value))}
+                            onChange={(e) => handleCellChange(code, 'statisticalTax', parseFormattedNumber(e.target.value))}
                             className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-bold text-right"
                           />
                           <span className="text-slate-500">%</span>
@@ -201,9 +204,9 @@ export const ManualFiscalMatrixTab: React.FC<ManualFiscalMatrixTabProps> = ({ cu
                         <div className="flex items-center gap-1">
                           <input
                             type="number"
-                            step="0.1"
+                            step="any"
                             value={item.tpa || 0}
-                            onChange={(e) => handleCellChange(code, 'tpa', Number(e.target.value))}
+                            onChange={(e) => handleCellChange(code, 'tpa', parseFormattedNumber(e.target.value))}
                             className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-bold text-right"
                           />
                           <span className="text-slate-500">%</span>

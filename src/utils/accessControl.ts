@@ -21,6 +21,15 @@ export function isStaffOrAdmin(role?: string | null): boolean {
 }
 
 /**
+ * Checks if a user has manager or admin privileges (Financial Dashboard & Management)
+ */
+export function isManagerOrAdmin(role?: string | null): boolean {
+  if (!role) return false;
+  const normalized = role.toLowerCase().trim();
+  return ['manager', 'gestor', 'super_admin', 'superadmin', 'admin_level1', 'admin_level2', 'admin'].includes(normalized);
+}
+
+/**
  * Checks if a user is a super administrator (admin_level1, super_admin, superadmin)
  */
 export function isSuperAdmin(role?: string | null): boolean {

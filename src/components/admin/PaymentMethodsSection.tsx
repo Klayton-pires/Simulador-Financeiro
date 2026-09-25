@@ -13,7 +13,14 @@ import {
   Globe,
   Coins,
   QrCode,
-  DollarSign
+  DollarSign,
+  Zap,
+  Webhook,
+  Copy,
+  Check,
+  Play,
+  RefreshCw,
+  Radio
 } from 'lucide-react';
 import { UserSafe, BankAccount } from '../../types';
 import { INITIAL_BANK_ACCOUNTS } from '../../data/mockDatabase';
@@ -90,6 +97,57 @@ export const PaymentMethodsSection: React.FC<PaymentMethodsSectionProps> = ({
   const [formHolder, setFormHolder] = useState<string>('NANUCLOUD TECH SOLUTIONS LDA');
   const [formCurrency, setFormCurrency] = useState<string>('AOA (Kz)');
   const [formIsVisible, setFormIsVisible] = useState<boolean>(true);
+
+  // Webhook State & Handlers
+  const [testGateway, setTestGateway] = useState<'paypal' | 'emis'>('paypal');
+  const [testEmail, setTestEmail] = useState<string>(currentUser.email || '');
+  const [testPlanId, setTestPlanId] = useState<string>('plan_intermedio');
+  const [testReference, setTestReference] = useState<string>('');
+  const [isTestingWebhook, setIsTestingWebhook] = useState<boolean>(false);
+  const [webhookTestMessage, setWebhookTestMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
+
+  const handleTriggerWebhookTest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testEmail.trim()) {
+      setWebhookTestMessage({ type: 'error', text: 'Indique o e-mail do cliente para testar a ativação do plano.' });
+      return;
+    }
+    setIsTestingWebhook(true);
+    setWebhookTestMessage(null);
+    try {
+      const res = await fetch('/api/webhooks/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gateway: testGateway,
+          userEmail: testEmail.trim(),
+          planId: testPlanId,
+          reference: testReference.trim() || undefined
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Falha ao processar simulação do webhook.');
+      }
+      setWebhookTestMessage({
+        type: 'success',
+        text: `✅ ${data.message} Novo saldo: ${data.user?.queriesRemaining} consultas (Expira a ${data.user?.planExpiresAt?.split('T')[0]}).`
+      });
+      showSaveNotice(`Webhook ${testGateway.toUpperCase()} testado com sucesso!`);
+    } catch (err: any) {
+      setWebhookTestMessage({ type: 'error', text: err.message || 'Erro de conexão ao testar webhook.' });
+    } finally {
+      setIsTestingWebhook(false);
+    }
+  };
+
+  const handleCopyEndpoint = (path: string) => {
+    const fullUrl = `${window.location.origin}${path}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedEndpoint(path);
+    setTimeout(() => setCopiedEndpoint(null), 2500);
+  };
 
   const persistBanks = (updated: BankAccount[]) => {
     setBankAccounts(updated);
@@ -430,6 +488,171 @@ export const PaymentMethodsSection: React.FC<PaymentMethodsSectionProps> = ({
             onChange={(e) => setGateways({ ...gateways, instructionsText: e.target.value })}
             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"
           />
+        </div>
+      </div>
+
+      {/* SECTION 3: Webhooks de Ativação Instantânea (PayPal & EMIS Multicaixa) */}
+      <div className="space-y-4 pt-4 border-t border-slate-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Webhook className="w-4 h-4 text-cyan-400" />
+            <h4 className="font-bold text-slate-100 uppercase text-xs">
+              3. Webhooks de Ativação Automática de Planos (PayPal & EMIS Multicaixa)
+            </h4>
+          </div>
+          <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-mono font-bold flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Motor Ativo
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Configure estas URLs nos portais de integração do <strong>PayPal Developer</strong> e da <strong>EMIS Angola</strong>. 
+          Quando o cliente liquida a subscrição, o webhook recebe a notificação em tempo real, credita automaticamente o saldo de consultas na conta do utilizador e desbloqueia os módulos contratados sem intervenção manual.
+        </p>
+
+        {/* URLs dos Webhooks */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* PayPal Webhook Card */}
+          <div className="bg-slate-900/90 border border-blue-500/30 rounded-xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-blue-300">
+                <Globe className="w-3.5 h-3.5 text-blue-400" />
+                <span>Webhook PayPal Instantâneo</span>
+              </div>
+              <span className="text-[9px] bg-blue-500/15 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded">
+                POST · JSON / IPN
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-mono">
+              <code className="text-slate-300 truncate flex-1 select-all text-[11px]">
+                /api/webhooks/paypal
+              </code>
+              <button
+                type="button"
+                onClick={() => handleCopyEndpoint('/api/webhooks/paypal')}
+                className="px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 transition text-[10px] font-bold shrink-0 flex items-center gap-1 cursor-pointer"
+              >
+                {copiedEndpoint === '/api/webhooks/paypal' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedEndpoint === '/api/webhooks/paypal' ? 'Copiado!' : 'Copiar URL'}</span>
+              </button>
+            </div>
+            <div className="text-[10px] text-slate-400 space-y-0.5">
+              <div>• <strong>Eventos:</strong> PAYMENT.CAPTURE.COMPLETED, CHECKOUT.ORDER.APPROVED</div>
+              <div>• <strong>Ação:</strong> Identifica o cliente por e-mail ou order_id e ativa consultas no ato.</div>
+            </div>
+          </div>
+
+          {/* EMIS Multicaixa Webhook Card */}
+          <div className="bg-slate-900/90 border border-emerald-500/30 rounded-xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
+                <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Webhook EMIS Multicaixa Express / GPO</span>
+              </div>
+              <span className="text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                POST · JSON
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-mono">
+              <code className="text-slate-300 truncate flex-1 select-all text-[11px]">
+                /api/webhooks/emis
+              </code>
+              <button
+                type="button"
+                onClick={() => handleCopyEndpoint('/api/webhooks/emis')}
+                className="px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition text-[10px] font-bold shrink-0 flex items-center gap-1 cursor-pointer"
+              >
+                {copiedEndpoint === '/api/webhooks/emis' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedEndpoint === '/api/webhooks/emis' ? 'Copiado!' : 'Copiar URL'}</span>
+              </button>
+            </div>
+            <div className="text-[10px] text-slate-400 space-y-0.5">
+              <div>• <strong>Eventos:</strong> Liquidação Multicaixa, Pagamento de Serviços (Ref), Express.</div>
+              <div>• <strong>Ação:</strong> Cruza a referência ou telemóvel do cliente e liquida a transação.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Ferramenta de Teste de Webhook para Gestores */}
+        <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Play className="w-4 h-4 text-cyan-400" />
+              <strong className="text-slate-200 text-xs">Simulador de Ativação Instantânea (Teste para Gestores)</strong>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono">Testar disparo em tempo real</span>
+          </div>
+
+          <form onSubmit={handleTriggerWebhookTest} className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+            <div>
+              <label className="block text-slate-400 text-[10px] mb-1 font-mono">Gateway de Pagamento:</label>
+              <select
+                value={testGateway}
+                onChange={(e) => setTestGateway(e.target.value as any)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200"
+              >
+                <option value="paypal">PayPal Webhook</option>
+                <option value="emis">EMIS Multicaixa Webhook</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-400 text-[10px] mb-1 font-mono">E-mail do Cliente:</label>
+              <input
+                type="email"
+                required
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="cliente@exemplo.com"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 text-[10px] mb-1 font-mono">Plano a Ativar:</label>
+              <select
+                value={testPlanId}
+                onChange={(e) => setTestPlanId(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200"
+              >
+                <option value="plan_basico">Plano Básico (30 consultas · 1.500 Kz)</option>
+                <option value="plan_intermedio">Plano Intermédio (100 consultas · 3.500 Kz)</option>
+                <option value="plan_avancado">Plano Avançado (250 consultas · 8.000 Kz)</option>
+                <option value="plan_ilimitado">Plano Ilimitado Anual (10.000 consultas · 25.000 Kz)</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={isTestingWebhook}
+                className="w-full py-2 px-3 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow cursor-pointer disabled:opacity-50 text-xs"
+              >
+                {isTestingWebhook ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>A Processar...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Disparar Webhook</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {webhookTestMessage && (
+            <div className={`p-3 rounded-lg text-xs font-mono border animate-in fade-in ${
+              webhookTestMessage.type === 'success'
+                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+            }`}>
+              {webhookTestMessage.text}
+            </div>
+          )}
         </div>
       </div>
 

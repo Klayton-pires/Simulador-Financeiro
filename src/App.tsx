@@ -27,6 +27,8 @@ import { FinancialAnalyticsDashboard } from './components/FinancialAnalyticsDash
 import { LegalTermsModal } from './components/LegalTermsModal';
 import { CornerMenu } from './components/CornerMenu';
 import { useGuestCredits } from './utils/guestCredits';
+import { isManagerOrAdmin } from './utils/accessControl';
+import { Shield } from 'lucide-react';
 
 function AppContent() {
   const { language, setLanguage } = useI18n();
@@ -296,12 +298,42 @@ function AppContent() {
             <AdminAdvancedSettingsTab currentUser={effectiveUser} />
           )}
 
-          {/* TAB: Dashboard de Análise de Dados Financeiros (Recharts) */}
-          {(activeTab === 'analytics_dashboard' || activeTab === 'history') && (
-            <FinancialAnalyticsDashboard
-              currentUser={effectiveUser}
-              onNavigateToSimulator={(simType) => setActiveTab(simType as ActiveTab)}
-            />
+          {/* TAB: Dashboard de Análise de Dados Financeiros (Exclusivo para Gestores) */}
+          {activeTab === 'analytics_dashboard' && (
+            !(isAdmin || isManagerOrAdmin(currentUser?.role)) ? (
+              <div className="bg-[#1E293B] border border-amber-500/30 rounded-2xl p-8 text-center space-y-4 max-w-xl mx-auto my-12 animate-in fade-in">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                  <Shield className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-bold text-white font-mono">
+                  Acesso Restrito: Dashboard Exclusivo para Gestores
+                </h3>
+                <p className="text-xs text-slate-300 font-mono leading-relaxed">
+                  O <strong>Dashboard Financeiro e de Análise de Volume</strong> é uma funcionalidade executiva reservada exclusivamente para os <strong>Gestores e Administradores</strong> da NANUCLOUD.
+                </p>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleOpenAdminLogin}
+                    className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white rounded-xl text-xs font-mono font-bold transition shadow-lg cursor-pointer"
+                  >
+                    Entrar como Gestor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('local')}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-mono transition cursor-pointer"
+                  >
+                    Voltar aos Simuladores
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <FinancialAnalyticsDashboard
+                currentUser={effectiveUser}
+                onNavigateToSimulator={(simType) => setActiveTab(simType as ActiveTab)}
+              />
+            )
           )}
 
         </div>

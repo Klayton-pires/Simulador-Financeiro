@@ -940,15 +940,42 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
               </div>
 
               <div>
-                <label className="text-[11px] font-mono text-slate-400 block mb-1">TAXA TPA / MULTICAIXA (%):</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
+                    <span>TAXA TPA / MULTICAIXA:</span>
+                    <span className="text-[9px] bg-amber-500/15 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded font-normal">
+                      Personalizável
+                    </span>
+                  </label>
+                  <span className="text-[10px] text-amber-400 font-mono font-bold">
+                    {tpaRate ? `${tpaRate}%` : '0%'}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1">
                   <NumericInput
                     value={tpaRate}
                     onChange={setTpaRate}
                     placeholder="0,000"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono font-bold"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-amber-300 font-mono font-bold focus:border-amber-500 outline-none"
                   />
-                  <span className="text-slate-500 font-mono text-xs">%</span>
+                  <span className="text-amber-400 font-mono text-xs font-bold">%</span>
+                </div>
+                {/* Predefinições Rápidas de TPA */}
+                <div className="flex items-center gap-1 overflow-x-auto pt-1.5 no-scrollbar text-[10px] font-mono">
+                  {['0', '0.5', '1.0', '1.2', '1.5', '2.0'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setTpaRate(preset)}
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 transition cursor-pointer ${
+                        tpaRate === preset || (preset === '0' && (!tpaRate || tpaRate === '0'))
+                          ? 'bg-amber-500 text-slate-950 font-bold'
+                          : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
+                      }`}
+                    >
+                      {preset}%
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

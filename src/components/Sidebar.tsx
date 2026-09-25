@@ -19,6 +19,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { isManagerOrAdmin } from '../utils/accessControl';
 
 export type ActiveTab =
   | 'local'
@@ -58,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenClientProfile
 }) => {
   const { currentUser, isClient, isAdmin, logout, transactions } = useAuth();
+  const isManager = isManagerOrAdmin(currentUser?.role) || isAdmin;
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.pt;
 
   const pendingPaymentsCount = transactions.filter((t) => t.status === 'pending').length;
@@ -240,24 +242,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* Secção de Inteligência & Dashboard */}
-      <div className="glass-panel rounded-2xl p-2.5 shadow-lg border border-white/[0.08]">
-        <button
-          type="button"
-          onClick={() => onTabChange('analytics_dashboard')}
-          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
-            activeTab === 'analytics_dashboard' || activeTab === 'history'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-              : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'analytics_dashboard' || activeTab === 'history' ? 'text-white' : 'text-indigo-400'}`} />
-            <span className="font-medium truncate">Dashboard Financeiro</span>
-          </div>
-          <span className="text-[10px] text-slate-400 opacity-80">Gráficos</span>
-        </button>
-      </div>
+      {/* Secção de Inteligência & Dashboard - Exclusivo para os Gestores */}
+      {isManager && (
+        <div className="glass-panel rounded-2xl p-2.5 shadow-lg border border-white/[0.08]">
+          <button
+            type="button"
+            onClick={() => onTabChange('analytics_dashboard')}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer text-left ${
+              activeTab === 'analytics_dashboard'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'analytics_dashboard' ? 'text-white' : 'text-indigo-400'}`} />
+              <span className="font-medium truncate">Dashboard Financeiro</span>
+            </div>
+            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono font-bold">Gestor</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Section */}
       <div className="glass-panel rounded-2xl p-2.5 shadow-lg border border-white/[0.08] flex flex-col gap-0.5">
