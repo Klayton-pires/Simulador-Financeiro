@@ -28,6 +28,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { GoogleAdBanner } from './ads/GoogleAdBanner';
 import { showToast } from '../context/NotificationContext';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { canUserSimulate } from '../utils/accessControl';
@@ -1135,6 +1136,12 @@ export const ServicesConsultingSimulator: React.FC<ServicesConsultingSimulatorPr
                   <strong>Aviso Legal Nanucloud:</strong> A utilização deste aplicativo tem caráter meramente informativo e estimativo, não dispensando a consulta de um profissional de contas ou contabilista certificado.
                 </span>
               </div>
+
+              {/* Google Ads / AdSense Monetization Banner */}
+              <GoogleAdBanner
+                position="in-content"
+                onOpenPlans={onOpenPlans}
+              />
             </div>
           ) : (
             <div className="bg-[#1E293B]/60 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-4 sticky top-4">

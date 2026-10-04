@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { UserSafe, QueryHistoryItem } from '../types';
+import { getVisitorMetrics } from '../utils/googleAnalytics';
 
 interface FinancialAnalyticsDashboardProps {
   currentUser: UserSafe;
@@ -649,6 +650,49 @@ export const FinancialAnalyticsDashboard: React.FC<FinancialAnalyticsDashboardPr
           </div>
         </div>
       </div>
+
+      {/* Google Analytics 4 & Google Ads Executive Summary Bar */}
+      {(() => {
+        const gaMetrics = getVisitorMetrics();
+        return (
+          <div className="bg-gradient-to-r from-indigo-950/40 via-slate-900 to-amber-950/30 border border-slate-700/80 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">Google Analytics & Google Ads</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    {gaMetrics.activeVisitorsNow} Online Agora
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {gaMetrics.todayVisitors} visitantes únicos hoje · {gaMetrics.todayPageViews} visualizações de página
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs">
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 block uppercase">Renda Extra Ads Estimada:</span>
+                <span className="font-bold text-amber-400 text-sm">
+                  {gaMetrics.adsRevenueEstimate.todayEarningsKz.toLocaleString('pt-PT')} Kz / dia
+                </span>
+              </div>
+              <a
+                href="https://analytics.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/30 rounded-lg text-xs font-semibold transition"
+              >
+                Ver no GA4
+              </a>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* KPI Cards Grid (Tabular Numerals & High Density) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

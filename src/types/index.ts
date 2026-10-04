@@ -465,7 +465,12 @@ export interface SystemSettings {
   // Central Server Link
   centralServer?: CentralServerConfig;
 
-  // Google AdSense (Up to 3 slots in free mode)
+  // Google Analytics & Google Ads (Monetização)
+  googleAnalyticsEnabled?: boolean;
+  googleAnalyticsMeasurementId?: string;
+  googleAdsEnabled?: boolean;
+  googleAdsConversionId?: string;
+  googleAdsShowOnPaidUsers?: boolean;
   googleAdsenseEnabled?: boolean;
   googleAdsensePublisherId?: string;
   googleAdsenseSlots?: AdsenseSlotConfig[];

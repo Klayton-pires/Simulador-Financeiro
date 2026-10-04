@@ -289,7 +289,12 @@ export interface SystemSettings {
   // Fiscal AI
   fiscalAiAutoCheckEnabled?: boolean;
 
-  // Marketing & Google AdSense
+  // Marketing, Google Analytics & Google Ads (Monetização)
+  googleAnalyticsEnabled?: boolean;
+  googleAnalyticsMeasurementId?: string;
+  googleAdsEnabled?: boolean;
+  googleAdsConversionId?: string;
+  googleAdsShowOnPaidUsers?: boolean;
   googleAdsenseEnabled?: boolean;
   googleAdsensePublisherId?: string;
   googleAdsenseSlotId?: string;

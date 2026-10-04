@@ -615,7 +615,13 @@ INSERT INTO system_settings (setting_key, setting_value, description ) VALUES
 ('app_name' , 'NANUCLOUD SIMULADOR FISCAL & COMERCIAL' , 'Nome da aplicação' ) ,
 -- ... (mantenha as outras configurações que já lá estão) ...
 ('free_queries_on_register' , '10' , 'Consultas gratuitas atribuídas no registo de novo utilizador' ),
-('guest_free_queries', '-1', 'Limite de consultas para visitantes (-1 para ilimitado)') -- ADICIONE APENAS ESTA LINHA AQUI
+('guest_free_queries', '-1', 'Limite de consultas para visitantes (-1 para ilimitado)'),
+('google_analytics_enabled', 'true', 'Ativar Google Analytics GA4 para medição de visitantes'),
+('google_analytics_measurement_id', 'G-NANUCLOUD1', 'ID de medição Google Analytics GA4'),
+('google_ads_enabled', 'true', 'Ativar Google Ads / AdSense para gerar receita extra'),
+('google_adsense_publisher_id', 'ca-pub-9428510834729105', 'ID de publicador Google AdSense'),
+('google_ads_conversion_id', 'AW-11482910283', 'ID de conversão Google Ads'),
+('google_ads_show_on_paid_users', 'true', 'Exibir anúncios também em utilizadores pagos para máxima receita')
 ON CONFLICT (setting_key ) DO UPDATE SET setting_value = EXCLUDED.setting_value;
 -- ============================================================================
 -- FIM DO SCRIPT DE CRIAÇÃO E IMPORTAÇÃO SQL (20 TABELAS RELACIONAIS)

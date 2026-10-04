@@ -69,6 +69,13 @@ router.get('/public-config', (req: AuthRequest, res: Response) => {
     payPayEnabled: settings.payPayEnabled ?? true,
     alipayEnabled: settings.alipayEnabled ?? true,
     bankAccounts: settings.bankAccounts || [],
+    googleAnalyticsEnabled: settings.googleAnalyticsEnabled ?? true,
+    googleAnalyticsMeasurementId: settings.googleAnalyticsMeasurementId || 'G-NANUCLOUD1',
+    googleAdsEnabled: settings.googleAdsEnabled ?? true,
+    googleAdsenseEnabled: settings.googleAdsenseEnabled ?? true,
+    googleAdsensePublisherId: settings.googleAdsensePublisherId || 'ca-pub-9428510834729105',
+    googleAdsConversionId: settings.googleAdsConversionId || '',
+    googleAdsShowOnPaidUsers: settings.googleAdsShowOnPaidUsers ?? true,
     googleAdsenseSlots: settings.googleAdsenseSlots || []
   });
 });

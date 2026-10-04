@@ -23,12 +23,14 @@ import { TicketsManagementTab } from '../TicketsManagementTab';
 import { DatabaseSqlManagementSection } from './DatabaseSqlManagementSection';
 import { AuditLogsManagementSection } from './AuditLogsManagementSection';
 import { DailyBackupManagementView } from './DailyBackupManagementView';
-import { Database, FileText, Cloud } from 'lucide-react';
+import { GoogleMonetizationSettingsSection } from './GoogleMonetizationSettingsSection';
+import { Database, FileText, Cloud, TrendingUp } from 'lucide-react';
 
 export type AdminSettingsSection =
   | 'pending_payments'
   | 'clients'
   | 'plans'
+  | 'google_monetization'
   | 'tickets'
   | 'payments'
   | 'database_sql'
@@ -100,6 +102,12 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
       label: 'Planos & Preços',
       icon: <Package className="w-4 h-4" />,
       desc: 'Preços Kz e créditos por plano'
+    },
+    {
+      id: 'google_monetization',
+      label: 'Google Ads & Analytics',
+      icon: <TrendingUp className="w-4 h-4 text-amber-400" />,
+      desc: 'Renda extra e visitantes'
     },
     {
       id: 'tickets',
@@ -232,6 +240,13 @@ export const AdminAdvancedSettingsTab: React.FC<AdminAdvancedSettingsTabProps> =
 
         {activeSection === 'plans' && (
           <PlansManagementSection
+            currentUser={currentUser}
+            showSaveNotice={showSaveNotice}
+          />
+        )}
+
+        {activeSection === 'google_monetization' && (
+          <GoogleMonetizationSettingsSection
             currentUser={currentUser}
             showSaveNotice={showSaveNotice}
           />

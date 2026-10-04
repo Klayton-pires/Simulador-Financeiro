@@ -226,7 +226,14 @@ const DEFAULT_SETTINGS: SystemSettings = {
   allowRegistration: false,
   maintenanceMode: false,
   bankAccounts: DEFAULT_BANK_ACCOUNTS,
-  activeDatabaseEngine: 'none'
+  activeDatabaseEngine: 'none',
+  googleAnalyticsEnabled: true,
+  googleAnalyticsMeasurementId: 'G-NANUCLOUD1',
+  googleAdsEnabled: true,
+  googleAdsenseEnabled: true,
+  googleAdsensePublisherId: 'ca-pub-9428510834729105',
+  googleAdsConversionId: 'AW-11482910283',
+  googleAdsShowOnPaidUsers: true
 };
 
 const DEFAULT_AUDIT_LOGS: AuditLog[] = [

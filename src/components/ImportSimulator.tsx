@@ -31,6 +31,7 @@ import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
 import { NumericInput } from './common/NumericInput';
 import { parseFormattedNumber } from '../utils/numberFormat';
 import { showToast } from '../context/NotificationContext';
+import { GoogleAdBanner } from './ads/GoogleAdBanner';
 
 interface ImportSimulatorProps {
   user: UserSafe | null;
@@ -909,6 +910,12 @@ export const ImportSimulator: React.FC<ImportSimulatorProps> = ({
           <strong>Aviso Legal Nanucloud:</strong> A utilização deste simulador tem caráter estimativo e informativo, <strong>não dispensando a consulta de um profissional de contas</strong> ou despachante aduaneiro certificado.
         </span>
       </div>
+
+      {/* Google Ads / AdSense Monetization Banner */}
+      <GoogleAdBanner
+        position="in-content"
+        onOpenPlans={onOpenPlans}
+      />
     </div>
   );
 };

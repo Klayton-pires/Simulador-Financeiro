@@ -16,6 +16,7 @@ import { NanuCloudLogo } from './NanuCloudLogo';
 import { useLayoutMode } from '../data/layoutMode';
 import { useAuth } from '../context/AuthContext';
 import { isManagerOrAdmin } from '../utils/accessControl';
+import { subscribeToVisitorMetrics, getVisitorMetrics } from '../utils/googleAnalytics';
 
 interface NavbarProps {
   currentLang: SupportedLang;
@@ -28,6 +29,7 @@ interface NavbarProps {
   onOpenAdminDashboard?: () => void;
   onOpenPlans?: () => void;
   onOpenAnalytics?: () => void;
+  onOpenVisitorAnalytics?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -40,10 +42,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenClientProfile,
   onOpenAdminDashboard,
   onOpenPlans,
-  onOpenAnalytics
+  onOpenAnalytics,
+  onOpenVisitorAnalytics
 }) => {
   const [layoutMode, setLayoutMode] = useLayoutMode();
   const { currentUser, isClient, isAdmin, logout, transactions } = useAuth();
+  const isAuthorizedAdmin = isAdmin || isManagerOrAdmin(currentUser?.role);
+  const [liveVisitors, setLiveVisitors] = React.useState<number>(() => isAuthorizedAdmin ? getVisitorMetrics().activeVisitorsNow : 0);
+
+  React.useEffect(() => {
+    if (!isAuthorizedAdmin) return;
+    const unsub = subscribeToVisitorMetrics((m) => {
+      setLiveVisitors(m.activeVisitorsNow);
+    });
+    return unsub;
+  }, [isAuthorizedAdmin]);
 
   const pendingPaymentsCount = transactions.filter((t) => t.status === 'pending').length;
 
@@ -191,6 +204,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Gestores</span>
               </button>
             </div>
+          )}
+
+          {/* Live Visitor & Google Analytics / Google Ads Monitor Button - Exclusivo para Administradores e Gestores */}
+          {onOpenVisitorAnalytics && isAuthorizedAdmin && (
+            <button
+              type="button"
+              onClick={onOpenVisitorAnalytics}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition cursor-pointer shadow-sm active:scale-95 group"
+              title="Google Analytics & Google Ads: Painel Exclusivo de Administrador (Visitantes Online & Tráfego)"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+              <span className="font-mono text-[11px] font-bold text-white group-hover:text-emerald-200">
+                {liveVisitors}
+              </span>
+              <span className="hidden sm:inline text-[11px] text-emerald-400/90 font-mono">
+                online
+              </span>
+            </button>
           )}
 
           {/* Dynamic Layout Mode Switcher (Friendly vs Advanced) */}

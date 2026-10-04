@@ -26,6 +26,9 @@ import { AdminAdvancedSettingsTab } from './components/admin/AdminAdvancedSettin
 import { FinancialAnalyticsDashboard } from './components/FinancialAnalyticsDashboard';
 import { LegalTermsModal } from './components/LegalTermsModal';
 import { CornerMenu } from './components/CornerMenu';
+import { GoogleAdBanner } from './components/ads/GoogleAdBanner';
+import { VisitorAnalyticsModal } from './components/ads/VisitorAnalyticsModal';
+import { initGoogleAnalytics, trackPageView } from './utils/googleAnalytics';
 import { useGuestCredits } from './utils/guestCredits';
 import { isManagerOrAdmin } from './utils/accessControl';
 import { Shield } from 'lucide-react';
@@ -39,6 +42,7 @@ function AppContent() {
   });
 
   const { currentUser, isClient, isAdmin, consumeCredit } = useAuth();
+  const isManager = isAdmin || isManagerOrAdmin(currentUser?.role);
   const guestCredits = useGuestCredits();
 
   const toggleSidebar = () => {
@@ -57,7 +61,31 @@ function AppContent() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authInitialTab, setAuthInitialTab] = useState<'client' | 'admin'>('client');
   const [isClientProfileOpen, setIsClientProfileOpen] = useState<boolean>(false);
+  const [isVisitorAnalyticsOpen, setIsVisitorAnalyticsOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
+
+  // Initialize Google Analytics (GA4) with configured ID
+  useEffect(() => {
+    initGoogleAnalytics(systemSettings?.googleAnalyticsMeasurementId || 'G-NANUCLOUD1');
+  }, [systemSettings?.googleAnalyticsMeasurementId]);
+
+  // Track virtual pageviews on tab change
+  useEffect(() => {
+    const tabTitles: Record<string, string> = {
+      local: 'Vendas & Comércio Local',
+      services_consulting: 'Prestação de Serviços & Consultoria',
+      intermediary: 'Intermediação & Corretagem',
+      basic_mobile: 'Modo Celular Básico / POS',
+      import: 'Importação Aduaneira & Pauta',
+      excel: 'Simulação em Lote Excel (.xlsx)',
+      api_integration: 'API REST & ERPs PHC/Primavera',
+      fiscal_matrix: 'Matriz Fiscal de Taxas',
+      tickets: 'Central de Suporte & Contactos',
+      admin_settings: 'Definições & Backoffice',
+      analytics_dashboard: 'Dashboard Financeiro'
+    };
+    trackPageView(tabTitles[activeTab] || activeTab, '/' + activeTab);
+  }, [activeTab]);
 
   // Fallback guest profile if unauthenticated (Standard User / Visitor role - Free demonstration queries)
   const guestOperator: UserSafe = {
@@ -156,6 +184,7 @@ function AppContent() {
           onOpenAdminDashboard={() => setActiveTab('admin_settings')}
           onOpenPlans={() => setIsPlansOpen(true)}
           onOpenAnalytics={() => setActiveTab('analytics_dashboard')}
+          onOpenVisitorAnalytics={isManager ? () => setIsVisitorAnalyticsOpen(true) : undefined}
         />
 
         {/* Main Container */}
@@ -206,6 +235,15 @@ function AppContent() {
             user={currentUser}
             onOpenRegister={handleOpenClientLogin}
             onOpenLogin={handleOpenClientLogin}
+          />
+
+          {/* Google Ads / AdSense Top Leaderboard Banner (Monetização) */}
+          <GoogleAdBanner
+            position="top-leaderboard"
+            publisherId={systemSettings?.googleAdsensePublisherId}
+            enabled={systemSettings?.googleAdsEnabled !== false}
+            isPaidUser={Boolean(currentUser?.activePlanId && currentUser.activePlanId !== 'plan_starter')}
+            onOpenPlans={() => setIsPlansOpen(true)}
           />
           
           {/* TAB: Vendas & Comércio (Local) */}
@@ -339,6 +377,15 @@ function AppContent() {
         </div>
       </main>
 
+      {/* Google Ads / AdSense Footer Banner (Monetização) */}
+      <GoogleAdBanner
+        position="footer-banner"
+        publisherId={systemSettings?.googleAdsensePublisherId}
+        enabled={systemSettings?.googleAdsEnabled !== false}
+        isPaidUser={Boolean(currentUser?.activePlanId && currentUser.activePlanId !== 'plan_starter')}
+        onOpenPlans={() => setIsPlansOpen(true)}
+      />
+
       {/* Global Footer */}
       <Footer settings={systemSettings} />
 
@@ -413,6 +460,20 @@ function AppContent() {
         onOpenAdminLogin={handleOpenAdminLogin}
         onOpenClientProfile={() => setIsClientProfileOpen(true)}
       />
+
+      {/* Google Analytics & Google Ads Live Visitor & Monetization Modal - Acesso Exclusivo para Administradores */}
+      {isManager && (
+        <VisitorAnalyticsModal
+          isOpen={isVisitorAnalyticsOpen}
+          onClose={() => setIsVisitorAnalyticsOpen(false)}
+          measurementId={systemSettings?.googleAnalyticsMeasurementId}
+          publisherId={systemSettings?.googleAdsensePublisherId}
+          isAdmin={isManager}
+          onOpenAdminSettings={() => {
+            setActiveTab('admin_settings');
+          }}
+        />
+      )}
       </div>
     </div>
   );

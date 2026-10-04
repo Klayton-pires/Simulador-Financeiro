@@ -43,6 +43,8 @@ import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
 import { NumericInput } from './common/NumericInput';
 import { parseFormattedNumber, formatPtNumber } from '../utils/numberFormat';
 import { showToast } from '../context/NotificationContext';
+import { GoogleAdBanner } from './ads/GoogleAdBanner';
+import { trackGoogleEvent } from '../utils/googleAnalytics';
 
 interface LocalTradeSimulatorProps {
   user: UserSafe | null;
@@ -818,6 +820,12 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
       });
 
       setCalculationResults(scenarios);
+      trackGoogleEvent('simulation_performed', {
+        module: 'local_trade',
+        country: country.code,
+        pricing_mode: pricingMode,
+        product: productName || 'Sem Nome'
+      });
       setSuccessMessage('Cálculo e simulação de margens concluídos com sucesso!');
       showToast({
         type: 'success',
@@ -3190,19 +3198,12 @@ export const LocalTradeSimulator: React.FC<LocalTradeSimulatorProps> = ({
         </span>
       </div>
 
-      {/* Google AdSense Monetization Banner (Only displayed in Free/Guest Mode) */}
-      {(!user || user.queriesRemaining <= 3) && (
-        <div className="bg-[#0F172A] border border-dashed border-slate-800 rounded-xl p-4 text-center space-y-2">
-          <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono uppercase tracking-wider">
-            <span>PUBLICIDADE PATROCINADA</span>
-            <span>GOOGLE ADSENSE (MODO GRATUITO)</span>
-          </div>
-          <div className="h-20 bg-slate-900/50 rounded-lg flex flex-col items-center justify-center border border-slate-800/40 text-slate-500 text-xs font-mono">
-            <span className="text-slate-400 font-bold">NANUCLOUD</span>
-            <span className="text-[11px] text-slate-600">Espaço publicitário reservado • Desativação automática para contas com planos ativos</span>
-          </div>
-        </div>
-      )}
+      {/* Google Ads / AdSense Monetization Banner */}
+      <GoogleAdBanner
+        position="in-content"
+        onOpenPlans={onOpenPlans}
+        isPaidUser={Boolean(user?.activePlanId && user.activePlanId !== 'plan_starter')}
+      />
 
       {/* Confirmation Modal before calculating results */}
       <ConfirmSimulationModal

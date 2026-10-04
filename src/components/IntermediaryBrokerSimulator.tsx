@@ -33,6 +33,7 @@ import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
 import { NumericInput } from './common/NumericInput';
 import { parseFormattedNumber } from '../utils/numberFormat';
+import { GoogleAdBanner } from './ads/GoogleAdBanner';
 
 interface IntermediaryBrokerSimulatorProps {
   user: UserSafe | null;
@@ -1302,6 +1303,12 @@ export const IntermediaryBrokerSimulator: React.FC<IntermediaryBrokerSimulatorPr
                 <strong>Aviso Legal Nanucloud:</strong> A utilização deste aplicativo tem caráter meramente informativo e estimativo, não dispensando a consulta de um profissional de contas ou contabilista certificado.
               </span>
             </div>
+
+            {/* Google Ads / AdSense Monetization Banner */}
+            <GoogleAdBanner
+              position="in-content"
+              onOpenPlans={onOpenPlans}
+            />
           </div>
         </div>
       ) : (

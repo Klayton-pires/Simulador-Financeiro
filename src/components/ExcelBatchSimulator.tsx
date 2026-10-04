@@ -29,6 +29,7 @@ import { isStaffOrAdmin, canUserSimulate } from '../utils/accessControl';
 import { ClientCreditNoticeBanner } from './ClientCreditNoticeBanner';
 import { consumeGuestCredit, getGuestCredits } from '../utils/guestCredits';
 import { ExhaustedCreditsModal } from './ExhaustedCreditsModal';
+import { GoogleAdBanner } from './ads/GoogleAdBanner';
 import { showToast } from '../context/NotificationContext';
 import { parseFormattedNumber } from '../utils/numberFormat';
 
@@ -816,6 +817,12 @@ export const ExcelBatchSimulator: React.FC<ExcelBatchSimulatorProps> = ({
           <strong>Aviso Legal Nanucloud:</strong> A utilização deste simulador em lotes Excel tem caráter estimativo e informativo, <strong>não dispensando a consulta de um profissional de contas</strong> ou contabilista certificado.
         </span>
       </div>
+
+      {/* Google Ads / AdSense Monetization Banner */}
+      <GoogleAdBanner
+        position="in-content"
+        onOpenPlans={onOpenPlans}
+      />
 
       {/* Exhausted Credits Modal - Prompts user to buy plan, then login */}
       <ExhaustedCreditsModal
